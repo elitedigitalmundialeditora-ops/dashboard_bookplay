@@ -1779,8 +1779,12 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
     }
     
     function getDiasPassados() { 
-        return configuracoes?.dias_passados || new Date().getDate(); 
+    const dias = configuracoes?.dias_passados;
+    if (dias && !isNaN(dias)) {
+        return Number(dias);
     }
+    return 16; // Valor padrão (altere conforme necessário)
+}
     
     function getDiasRestantes() { 
         return Math.max(0, getDiasUteis() - getDiasPassados()); 
@@ -1821,6 +1825,129 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         if (h >= 12 && h < 18) return "Boa tarde"; 
         return "Boa noite"; 
     }
+    
+    function calcularQuartilOperador(operadorAtual, operadorRecebido, metaOperador) {
+    const mes = new Date().getMonth() + 1;
+    const ano = new Date().getFullYear();
+    
+    // Buscar todos os operadores ativos (operador e elite)
+    const todosOperadores = usuarios.filter(u => (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+    
+    if (todosOperadores.length === 0) return null;
+    
+    // Criar array com nome, recebido, meta e projeção
+    let operadoresComProjecao = todosOperadores.map(op => {
+        const metaUsuario = metas.find(m => m?.usuario_id === op.id && m?.mes === mes && m?.ano === ano);
+        const meta = metaUsuario?.meta || 0;
+        const recebido = metaUsuario?.recebido || 0;
+        const projecao = calcularProjecao(meta, recebido);
+        
+        return {
+            id: op.id,
+            nome: op.nome,
+            recebido: recebido,
+            meta: meta,
+            projecao: projecao
+        };
+    });
+    
+    // Ordenar por PROJEÇÃO (do maior para o menor)
+    operadoresComProjecao.sort((a, b) => b.projecao - a.projecao);
+    
+    const operadorAtualCompleto = operadoresComProjecao.find(op => op.id === operadorAtual.id);
+    
+    if (!operadorAtualCompleto) return null;
+    
+    const projecaoAtual = operadorAtualCompleto.projecao;
+    const recebidoAtual = operadorAtualCompleto.recebido;
+    const metaValor = operadorAtualCompleto.meta;
+    const diasPassados = getDiasPassados();
+    
+    let quartilAtual = '';
+    let mensagem = '';
+    let icone = '';
+    let corBg = '';
+    let valorNecessario = 0;
+    let percentualMeta = 0;
+    
+    // Calcular percentual da meta
+    if (metaValor > 0) {
+        percentualMeta = (recebidoAtual / metaValor) * 100;
+    }
+    
+    // 🔥 CLASSIFICAÇÃO POR PROJEÇÃO COM MENSAGENS FORMATADAS
+    if (projecaoAtual >= 100) {
+        quartilAtual = '🏆 1º Quartil - Excelente!';
+        
+        if (metaValor > 0 && recebidoAtual >= metaValor) {
+            mensagem = `🎉 PARABÉNS! Meta batida e projeção superior a 100%!`;
+        } else if (metaValor > 0) {
+            const faltaMeta = metaValor - recebidoAtual;
+            mensagem = `🚀 Faltam ${formatMoney(faltaMeta)} para bater sua meta!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `🏆 Você está no Topo! Projeção superior a 100%!`;
+        }
+        icone = '🏆';
+        corBg = '#28A745';
+        valorNecessario = 0;
+    }
+    else if (projecaoAtual >= 80) {
+        quartilAtual = '📈 2º Quartil';
+        
+        // Calcular quanto falta de RECEBIDO para atingir 100% de projeção (1º Quartil)
+        const esperadoAtual = (metaValor / getDiasUteis()) * diasPassados;
+        const recebidoNecessario100 = esperadoAtual; // Para 100% de projeção, recebido = esperado
+        valorNecessario = recebidoNecessario100 - recebidoAtual;
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 1º Quartil<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `🎯 Você já atingiu a meta para o 1º Quartil!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        }
+        icone = '📈';
+        corBg = '#1E6DC3';
+    }
+    else if (projecaoAtual >= 40) {
+        quartilAtual = '⚠️ 3º Quartil';
+        
+        // Calcular quanto falta para chegar ao 2º Quartil (80% de projeção)
+        const esperadoAtual = (metaValor / getDiasUteis()) * diasPassados;
+        const recebidoNecessario80 = (80 * esperadoAtual) / 100;
+        valorNecessario = recebidoNecessario80 - recebidoAtual;
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 2º Quartil<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `📊 Você já atingiu a meta para o 2º Quartil!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        }
+        icone = '⚠️';
+        corBg = '#FFC107';
+    }
+    else {
+        quartilAtual = '🔴 4º Quartil - Crítico';
+        
+        // Calcular quanto falta para chegar ao 3º Quartil (40% de projeção)
+        const esperadoAtual = (metaValor / getDiasUteis()) * diasPassados;
+        const recebidoNecessario40 = (40 * esperadoAtual) / 100;
+        valorNecessario = recebidoNecessario40 - recebidoAtual;
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 3º Quartil<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `⚠️ Você já atingiu a meta para o 3º Quartil!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        }
+        icone = '⚡';
+        corBg = '#DC3545';
+    }
+    
+    return {
+        quartilAtual,
+        metaProximoQuartil: valorNecessario,
+        mensagem,
+        icone,
+        corBg
+    };
+}
     
     function parseMoneyToNumber(moneyString) {
     if (!moneyString || moneyString === '') return 0;
@@ -2022,38 +2149,61 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
     // ============================================
     
     async function carregarDados() {
-        try {
-            const [usuariosData, metasData, equipesData, metasEquipeData, cfgData, historicoData, classesData] = await Promise.all([ 
-                fetchFromSupabase('usuarios'), 
-                fetchFromSupabase('metas'), 
-                fetchFromSupabase('equipes'), 
-                fetchFromSupabase('metas_equipe'), 
-                fetchFromSupabase('configuracoes'), 
-                fetchFromSupabase('historico'), 
-                fetchFromSupabase('classes') 
-            ]);
-            usuarios = usuariosData; 
-            metas = metasData; 
-            equipes = equipesData; 
-            metasEquipe = metasEquipeData; 
-            historico = historicoData || []; 
-            classes = classesData || [];
-            if (cfgData && cfgData.length > 0) { 
-                configuracoes = cfgData[0]; 
-                if (configuracoes.meta_setor === undefined) configuracoes.meta_setor = 0; 
+    try {
+        const [usuariosData, metasData, equipesData, metasEquipeData, cfgData, historicoData, classesData] = await Promise.all([ 
+            fetchFromSupabase('usuarios'), 
+            fetchFromSupabase('metas'), 
+            fetchFromSupabase('equipes'), 
+            fetchFromSupabase('metas_equipe'), 
+            fetchFromSupabase('configuracoes'), 
+            fetchFromSupabase('historico'), 
+            fetchFromSupabase('classes') 
+        ]);
+        usuarios = usuariosData; 
+        metas = metasData; 
+        equipes = equipesData; 
+        metasEquipe = metasEquipeData; 
+        historico = historicoData || []; 
+        classes = classesData || [];
+        
+        // 🔥 CORREÇÃO: Carregar configurações com valores padrão
+        if (cfgData && cfgData.length > 0) { 
+            configuracoes = cfgData[0]; 
+            if (configuracoes.meta_setor === undefined) configuracoes.meta_setor = 0;
+        } else {
+            console.log('⚠️ Nenhuma configuração encontrada no banco! Criando configuração padrão...');
+            configuracoes = { 
+                total_dias_uteis: 22, 
+                dias_passados: 16,
+                meta_setor: 0 
+            };
+            try {
+                await insertInto('configuracoes', configuracoes);
+                console.log('✅ Configuração padrão criada no banco!');
+            } catch(e) {
+                console.warn('⚠️ Não foi possível salvar configuração no banco:', e);
             }
-            if (historico.length > 100) historico = historico.slice(0, 100);
-            let saved = localStorage.getItem('classesExpandidas'); 
-            if (saved) classesExpandidas = JSON.parse(saved);
-            let savedCollapsed = localStorage.getItem('equipesCollapsed'); 
-            if (savedCollapsed) equipesCollapsed = JSON.parse(savedCollapsed);
-            carregarFiltrosOperadores();
-            return true;
-        } catch(e) { 
-            console.error(e); 
-            return false; 
         }
+        
+        console.log('📅 Configurações carregadas:', configuracoes);
+        console.log('📅 Total dias úteis:', configuracoes.total_dias_uteis);
+        console.log('📅 Dias passados:', configuracoes.dias_passados);
+        
+        // 🔥 ADICIONE ESTA LINHA - FORÇA A ATUALIZAÇÃO
+        setTimeout(atualizarDiasUteis, 100);
+        
+        if (historico.length > 100) historico = historico.slice(0, 100);
+        let saved = localStorage.getItem('classesExpandidas'); 
+        if (saved) classesExpandidas = JSON.parse(saved);
+        let savedCollapsed = localStorage.getItem('equipesCollapsed'); 
+        if (savedCollapsed) equipesCollapsed = JSON.parse(savedCollapsed);
+        carregarFiltrosOperadores();
+        return true;
+    } catch(e) { 
+        console.error(e); 
+        return false; 
     }
+}
 
     async function carregarHistorico() {
     try {
@@ -3633,29 +3783,45 @@ window.limparFiltrosAnalitico = function() {
     // ============================================
     
     function carregarOperadorDashboard() {
-        const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
-        const metaOperador = metas.find(m => m?.usuario_id === currentUser.id && m?.mes === mes && m?.ano === ano) || { meta: 0, direto: 0, extra: 0, recebido: 0 };
-        const metaValor = metaOperador.meta;
-        const recebido = metaOperador.recebido;
-        const projecao = calcularProjecao(metaValor, recebido);
-        const projecaoHex = getProjecaoColorHex(projecao);
-        const esperado = calcularEsperado(metaValor);
-        const diferenca = recebido - esperado;
-        const metaDiaria = calcularMetaDiaria(metaValor);
-        const amanhaEsperado = esperado + metaDiaria;
-        const circumference = 2 * Math.PI * 80;
-        const dashArray = (projecao / 100) * circumference;
-        
-        const todosOperadores = usuarios.filter(u => (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
-        const operadoresComRecebido = todosOperadores.map(m => {
-            const metaUsuario = metas.find(meta => meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano);
-            return { id: m.id, nome: m.nome, recebido: metaUsuario?.recebido || 0, isCurrentUser: m.id === currentUser.id };
-        });
-        
-        const rankingMembros = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).slice(0, 10).map(m => ({ id: m.id, nome: m.nome, isCurrentUser: m.isCurrentUser }));
-        const posicaoAtual = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).findIndex(m => m.id === currentUser.id) + 1;
-        
-        const operadorHtml = `
+    const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
+    const metaOperador = metas.find(m => m?.usuario_id === currentUser.id && m?.mes === mes && m?.ano === ano) || { meta: 0, direto: 0, extra: 0, recebido: 0 };
+    const metaValor = metaOperador.meta;
+    const recebido = metaOperador.recebido;
+    const projecao = calcularProjecao(metaValor, recebido);
+    const projecaoHex = getProjecaoColorHex(projecao);
+    const esperado = calcularEsperado(metaValor);
+    const diferenca = recebido - esperado;
+    const metaDiaria = calcularMetaDiaria(metaValor);
+    const amanhaEsperado = esperado + metaDiaria;
+    const circumference = 2 * Math.PI * 80;
+    const dashArray = (projecao / 100) * circumference;
+    
+    // 🔥 CALCULAR QUARTIL DO OPERADOR
+    const quartilInfo = calcularQuartilOperador(
+        { id: currentUser.id, nome: currentUser.nome },
+        recebido,
+        metaValor
+    );
+    
+    // 🔥 CARD DO QUARTIL
+    const quartilCard = quartilInfo ? `
+        <div class="metric-card" style="background: linear-gradient(135deg, #0A2F44, ${quartilInfo.corBg}); color: white;">
+            <div class="metric-title" style="color: rgba(255,255,255,0.9);">${quartilInfo.icone}ANÁLISE POR QUARTIL</div>
+            <div class="metric-value" style="color: white; font-size: 1rem;">${quartilInfo.quartilAtual}</div>
+            <div class="metric-sub" style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 0.85rem;">${quartilInfo.mensagem}</div>
+        </div>
+    ` : '';
+    
+    const todosOperadores = usuarios.filter(u => (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+    const operadoresComRecebido = todosOperadores.map(m => {
+        const metaUsuario = metas.find(meta => meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano);
+        return { id: m.id, nome: m.nome, recebido: metaUsuario?.recebido || 0, isCurrentUser: m.id === currentUser.id };
+    });
+    
+    const rankingMembros = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).slice(0, 10).map(m => ({ id: m.id, nome: m.nome, isCurrentUser: m.isCurrentUser }));
+    const posicaoAtual = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).findIndex(m => m.id === currentUser.id) + 1;
+    
+    const operadorHtml = `
     <div class="operador-metrics-grid">
         <div class="metric-card"><div class="metric-title">💰 TOTAL RECEBIDO</div><div class="metric-value">${formatMoney(recebido)}</div><div class="metric-sub">Meta Individual: ${formatMoney(metaValor)}</div></div>
         <div class="metric-card"><div class="metric-title">⚡ RECEBIMENTO DIRETO</div><div class="metric-value" style="color: #1E6DC3;">${formatMoney(metaOperador.direto || 0)}</div><div class="metric-sub">Comissão Integral</div></div>
@@ -3663,6 +3829,7 @@ window.limparFiltrosAnalitico = function() {
         <div class="metric-card"><div class="metric-title">📈 PROJEÇÃO</div><div class="circle-chart-container"><div class="circle-chart"><svg viewBox="0 0 200 200"><circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/><circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/></svg><div class="percentage-text" style="color: ${projecaoHex}">${projecao.toFixed(1)}%</div></div></div></div>
         <div class="metric-card"><div class="metric-title">🎯 VALOR ESPERADO</div><div class="metric-value">${formatMoney(esperado)}</div><div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div></div>
         <div class="metric-card"><div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div><div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}</div><div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div></div>
+        ${quartilCard}
     </div>
     <div class="operador-info-extra">
         <div class="metric-title">📊 PROJEÇÃO DIÁRIA</div>
@@ -3680,17 +3847,17 @@ window.limparFiltrosAnalitico = function() {
         </li>`).join('')}</ul>` : '<p class="no-data-message">Nenhum operador cadastrado.</p>'}
     </div>
 `;
-        
-        document.getElementById('operadorDashboardContent').innerHTML = operadorHtml;
-        document.getElementById('operadorDashboardContent').classList.remove('hidden');
-        document.getElementById('gestorDashboardContent').classList.add('hidden');
-        document.getElementById('supervisorDashboardContent').classList.add('hidden');
-        document.getElementById('eliteDashboardContent').classList.add('hidden');
-        document.getElementById('motivationalMessage').innerHTML = "💪 Continue assim! Cada dia é uma nova oportunidade de superar suas metas!";
-        
-        const btnAnalitico = document.getElementById('btnAnalitico');
-        if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
-    }
+    
+    document.getElementById('operadorDashboardContent').innerHTML = operadorHtml;
+    document.getElementById('operadorDashboardContent').classList.remove('hidden');
+    document.getElementById('gestorDashboardContent').classList.add('hidden');
+    document.getElementById('supervisorDashboardContent').classList.add('hidden');
+    document.getElementById('eliteDashboardContent').classList.add('hidden');
+    document.getElementById('motivationalMessage').innerHTML = "💪 Continue assim! Cada dia é uma nova oportunidade de superar suas metas!";
+    
+    const btnAnalitico = document.getElementById('btnAnalitico');
+    if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
+}
 
     function carregarEliteDashboard() {
     const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
@@ -4058,10 +4225,10 @@ window.limparFiltrosAnalitico = function() {
 }
 
     function carregarDashboard() {
-        if(!currentUser) return;
-        document.getElementById('diasPassadosDisplay').innerHTML = getDiasPassados();
-        document.getElementById('diasRestantesDisplay').innerHTML = getDiasRestantes();
-        document.getElementById('totalDiasDisplay').innerHTML = getDiasUteis();
+    if(!currentUser) return;
+    document.getElementById('diasPassadosDisplay').innerHTML = getDiasPassados();
+    document.getElementById('diasRestantesDisplay').innerHTML = getDiasRestantes();
+    document.getElementById('totalDiasDisplay').innerHTML = getDiasUteis();
         
         const btnAnalitico = document.getElementById('btnAnalitico');
         
@@ -4094,6 +4261,14 @@ window.limparFiltrosAnalitico = function() {
             carregarEliteDashboard();
             if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
         }
+        
+        function carregarDashboard() {
+    if(!currentUser) return;
+    
+    // 🔥 ATUALIZAR DIAS ÚTEIS
+    atualizarDiasUteisDisplay();
+    
+    }
         
         setTimeout(function() {
             const btn = document.getElementById('btnAnalitico');
@@ -4664,14 +4839,35 @@ window.salvarEdicaoRapida = async (usuarioId, nomeAntigo) => {
     window.fecharModal = () => { document.getElementById('editModal').style.display = 'none'; document.getElementById('editModal').innerHTML = ''; };
     
     window.salvarDiasUteis = async () => { 
-        configuracoes.total_dias_uteis = +document.getElementById('totalDiasUteisConfig').value; 
-        configuracoes.dias_passados = +document.getElementById('diasPassadosConfig').value; 
-        if(configuracoes.id) await updateIn('configuracoes', configuracoes.id, { total_dias_uteis: configuracoes.total_dias_uteis, dias_passados: configuracoes.dias_passados }); 
-        else { let res = await insertInto('configuracoes', configuracoes); if(res && res[0]) configuracoes.id = res[0].id; } 
-        await registrarHistorico('edicao', `Configuração de dias úteis alterada`); 
-        await atualizarDadosImediatos(); 
-        showToast('✅ Dias atualizados'); 
-    };
+    const totalDias = parseInt(document.getElementById('totalDiasUteisConfig').value);
+    const diasPassados = parseInt(document.getElementById('diasPassadosConfig').value);
+    
+    if (isNaN(totalDias) || totalDias <= 0) {
+        showToast('❌ Informe um valor válido para Total de Dias Úteis');
+        return;
+    }
+    if (isNaN(diasPassados) || diasPassados < 0 || diasPassados > totalDias) {
+        showToast(`❌ Dias passados deve ser entre 0 e ${totalDias}`);
+        return;
+    }
+    
+    configuracoes.total_dias_uteis = totalDias;
+    configuracoes.dias_passados = diasPassados;
+    
+    if(configuracoes.id) {
+        await updateIn('configuracoes', configuracoes.id, { 
+            total_dias_uteis: configuracoes.total_dias_uteis, 
+            dias_passados: configuracoes.dias_passados 
+        });
+    } else { 
+        let res = await insertInto('configuracoes', configuracoes); 
+        if(res && res[0]) configuracoes.id = res[0].id; 
+    } 
+    
+    await registrarHistorico('edicao', `Configuração de dias úteis alterada: Total=${totalDias}, Passados=${diasPassados}`); 
+    await atualizarDadosImediatos(); 
+    showToast(`✅ Dias atualizados! Total: ${totalDias} | Passados: ${diasPassados}`); 
+};
     
     window.toggleEquipe = (equipeId) => { 
         equipesCollapsed[equipeId] = !equipesCollapsed[equipeId]; 
@@ -5057,6 +5253,10 @@ function carregarDashboard() {
     
     async function checkAuth(){
         await carregarDados();
+        
+        // 🔥 FORÇAR ATUALIZAÇÃO DOS DIAS ÚTEIS LOGO APÓS CARREGAR DADOS
+        setTimeout(atualizarDiasUteis, 200);
+        
         let saved = localStorage.getItem('currentUser');
         if(saved){
             currentUser = JSON.parse(saved);
@@ -5301,6 +5501,100 @@ function mostrarModalPrimeiroAcesso() {
     
     window.fecharModalMovimento = fecharModalMovimento;
     window.confirmarMovimento = confirmarMovimento;
+    
+// ============================================
+// FUNÇÃO FORÇADA PARA ATUALIZAR DIAS ÚTEIS
+// ============================================
+function atualizarDiasUteis() {
+    // Obter valores das configurações
+    let totalDias = 22;
+    let diasPassados = 16;
+    
+    if (configuracoes) {
+        totalDias = configuracoes.total_dias_uteis || 22;
+        diasPassados = configuracoes.dias_passados || 16;
+    }
+    
+    const diasRestantes = Math.max(0, totalDias - diasPassados);
+    
+    console.log('📅 Atualizando dias úteis - Total:', totalDias, 'Passados:', diasPassados, 'Restantes:', diasRestantes);
+    
+    // Tentar encontrar os elementos de várias formas
+    let elPassados = document.getElementById('diasPassadosDisplay');
+    let elRestantes = document.getElementById('diasRestantesDisplay');
+    let elTotal = document.getElementById('totalDiasDisplay');
+    
+    // Se não encontrar, tentar buscar dentro do dashboard
+    if (!elPassados) {
+        const dashboard = document.getElementById('dashboardTab');
+        if (dashboard) {
+            elPassados = dashboard.querySelector('#diasPassadosDisplay');
+            elRestantes = dashboard.querySelector('#diasRestantesDisplay');
+            elTotal = dashboard.querySelector('#totalDiasDisplay');
+        }
+    }
+    
+    // Se ainda não encontrou, recriar o card
+    if (!elPassados) {
+        console.log('⚠️ Card de dias úteis não encontrado, recriando...');
+        const motivationalDiv = document.getElementById('motivationalMessage');
+        if (motivationalDiv && motivationalDiv.parentNode) {
+            // Verificar se já existe um card de dias úteis
+            let existingCard = motivationalDiv.parentNode.querySelector('.dias-uteis-card');
+            if (existingCard) {
+                existingCard.remove();
+            }
+            
+            // Criar novo card após a mensagem motivacional
+            const newCard = document.createElement('div');
+            newCard.className = 'dias-uteis-card';
+            newCard.innerHTML = `
+                <div style="display: flex; justify-content: space-around;">
+                    <div><span class="valor-grande" id="diasPassadosDisplay">${diasPassados}</span><br>Dias Úteis Passados</div>
+                    <div><span class="valor-grande" id="diasRestantesDisplay">${diasRestantes}</span><br>Dias Restantes</div>
+                    <div><span class="valor-grande" id="totalDiasDisplay">${totalDias}</span><br>Total Dias</div>
+                </div>
+            `;
+            motivationalDiv.parentNode.insertBefore(newCard, motivationalDiv.nextSibling);
+            console.log('✅ Card de dias úteis recriado!');
+            return;
+        }
+    }
+    
+    // Atualizar os valores
+    if (elPassados) {
+        elPassados.innerHTML = diasPassados;
+        elRestantes.innerHTML = diasRestantes;
+        elTotal.innerHTML = totalDias;
+        console.log('✅ Dias úteis atualizados com sucesso!');
+    } else {
+        console.log('❌ Não foi possível encontrar ou criar os elementos de dias úteis');
+        // Última tentativa: aguardar e tentar novamente
+        setTimeout(atualizarDiasUteis, 500);
+    }
+}
+
+// Sobrescrever as funções getDiasUteis e getDiasPassados para garantir valores corretos
+const originalGetDiasUteis = getDiasUteis;
+const originalGetDiasPassados = getDiasPassados;
+
+window.getDiasUteis = function() {
+    return configuracoes?.total_dias_uteis || 22;
+};
+
+window.getDiasPassados = function() {
+    return configuracoes?.dias_passados || 16;
+};
+
+// Chamar a função em intervalos regulares até funcionar
+let tentativasDiasUteis = 0;
+const intervalDiasUteis = setInterval(function() {
+    tentativasDiasUteis++;
+    if (document.getElementById('diasPassadosDisplay') || tentativasDiasUteis > 20) {
+        clearInterval(intervalDiasUteis);
+        atualizarDiasUteis();
+    }
+}, 500);
     
     checkAuth();
 </script>
