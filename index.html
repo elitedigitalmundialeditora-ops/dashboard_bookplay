@@ -1603,51 +1603,24 @@
         <div class="admin-table"><div style="display:flex; justify-content:space-between; margin-bottom:25px;"><h3>👥 Gerenciar Equipes</h3><button onclick="abrirModalCriarEquipe()" class="btn-success">➕ Nova Equipe</button></div><div id="equipesContainer"></div></div>
     </div>
 
-    <div id="historicoTab" class="tab-content hidden">
-        <div class="admin-table">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <h3 style="color:#0F3B6F;">📜 Histórico de Alterações</h3>
-            </div>
-            <div class="historico-filtros">
-                <div class="historico-filtro-item">
-                    <label>📋 Tipo de Ação</label>
-                    <select id="filtroTipoAcao" onchange="aplicarFiltroHistorico()">
-                        <option value="todos">Todos</option>
-                        <option value="criacao">Criação</option>
-                        <option value="edicao">Edição</option>
-                        <option value="exclusao">Exclusão</option>
-                        <option value="movimentacao">Movimentação</option>
-                    </select>
-                </div>
-                <div class="historico-filtro-item">
-                    <label>👤 Usuário</label>
-                    <input type="text" id="filtroUsuarioHistorico" placeholder="Digite o nome..." oninput="aplicarFiltroHistorico()">
-                </div>
-                <div class="historico-filtro-item">
-                    <label>📅 Data Inicial</label>
-                    <input type="date" id="filtroDataInicio" onchange="aplicarFiltroHistorico()">
-                </div>
-                <div class="historico-filtro-item">
-                    <label>📅 Data Final</label>
-                    <input type="date" id="filtroDataFim" onchange="aplicarFiltroHistorico()">
-                </div>
-                <div class="historico-filtro-item">
-                    <button class="btn-limpar" onclick="limparFiltrosHistorico()">Limpar Filtros</button>
-                </div>
-            </div>
-            <div id="historicoContainer" style="overflow-x: auto;">
-                <table class="historico-table">
-                    <thead>
-                        <tr><th>📅 Data/Hora</th><th>👤 Usuário</th><th>📋 Ação</th><th>📝 Descrição</th></tr>
-                    </thead>
-                    <tbody id="historicoTableBody">
-                        <tr><td colspan="4" style="text-align: center;">Carregando histórico...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="paginationContainer" class="pagination"></div>
+<div id="historicoTab" class="tab-content hidden">
+    <div class="admin-table">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h3 style="color:#0F3B6F;">📜 Histórico de Alterações</h3>
         </div>
+        <div id="historicoContainer" style="overflow-x: auto;">
+            <table class="historico-table">
+                <thead>
+                    <tr><th>📅 Data/Hora</th><th>👤 Usuário</th><th>📋 Ação</th><th>📝 Descrição</th></tr>
+                </thead>
+                <tbody id="historicoTableBody">
+                    <tr><td colspan="4" style="text-align: center;">Carregando histórico...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="paginationContainer" class="pagination"></div>
     </div>
+</div>
     
     <div id="visaoEquipeTab" class="tab-content hidden">
         <div class="admin-table">
@@ -1997,31 +1970,52 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
     }
 
     async function registrarHistorico(acao, descricao) {
-        if (!currentUser) return;
-        const novoLog = { usuario_id: currentUser.id, usuario_nome: currentUser.nome, acao: acao, descricao: descricao, data_hora: new Date().toISOString() };
-        try {
-            await fetch(`${SUPABASE_URL}/rest/v1/historico`, { 
-                method: 'POST', 
-                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(novoLog) 
-            });
-            historico.unshift(novoLog);
-            if (historico.length > 100) { 
-                const excesso = historico.slice(100); 
-                historico = historico.slice(0, 100); 
-                for (let log of excesso) { 
-                    if (log.id) { 
-                        await fetch(`${SUPABASE_URL}/rest/v1/historico?id=eq.${log.id}`, { 
-                            method: 'DELETE', 
-                            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
-                        }); 
-                    } 
-                } 
-            }
-        } catch(e) { 
-            console.warn('Erro ao salvar log:', e); 
+    if (!currentUser) return;
+    
+    // 🔥 USA O HORÁRIO LOCAL DIRETAMENTE SEM CONVERSÃO
+    const agora = new Date();
+    
+    // Formata a data/hora local para string legível
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const minuto = String(agora.getMinutes()).padStart(2, '0');
+    const segundo = String(agora.getSeconds()).padStart(2, '0');
+    
+    // Salva como string no formato ISO mas com horário local
+    const dataHoraLocal = `${ano}-${mes}-${dia}T${hora}:${minuto}:${segundo}.000`;
+    
+    console.log('📝 Salvando histórico - Horário do computador:', `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`);
+    
+    const novoLog = { 
+        usuario_id: currentUser.id, 
+        usuario_nome: currentUser.nome, 
+        acao: acao, 
+        descricao: descricao, 
+        data_hora: dataHoraLocal
+    };
+    
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/historico`, { 
+            method: 'POST', 
+            headers: { 
+                'apikey': SUPABASE_ANON_KEY, 
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
+                'Content-Type': 'application/json' 
+            }, 
+            body: JSON.stringify(novoLog) 
+        });
+        historico.unshift(novoLog);
+        
+        // Limitar a 100 registros
+        if (historico.length > 100) { 
+            historico = historico.slice(0, 100);
         }
+    } catch(e) { 
+        console.warn('Erro ao salvar log:', e); 
     }
+}
 
     // ============================================
     // FUNÇÕES DE CARREGAMENTO DE DADOS
@@ -2062,17 +2056,28 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
     }
 
     async function carregarHistorico() {
-        try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/historico?select=*&order=data_hora.desc&limit=100`, { 
-                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
-            });
-            if (res.ok) historico = await res.json();
-            aplicarFiltroHistorico();
-        } catch(e) { 
-            console.warn('Erro ao carregar histórico:', e); 
-            document.getElementById('historicoTableBody').innerHTML = '<tr><td colspan="4" style="text-align: center;">Erro ao carregar histórico</td></tr>'; 
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/historico?select=*&order=data_hora.desc&limit=100`, { 
+            headers: { 
+                'apikey': SUPABASE_ANON_KEY, 
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
+            } 
+        });
+        if (res.ok) {
+            historico = await res.json();
+            console.log('📜 Histórico carregado:', historico.length, 'registros');
+            // Log para verificar a primeira data
+            if (historico.length > 0) {
+                console.log('📅 Primeira data do histórico:', historico[0].data_hora);
+                console.log('📅 Formatada:', formatarDataHoraBrasil(historico[0].data_hora));
+            }
         }
+        renderizarHistoricoPagina(); // CHAMAR DIRETAMENTE, sem aplicar filtros
+    } catch(e) { 
+        console.warn('Erro ao carregar histórico:', e); 
+        document.getElementById('historicoTableBody').innerHTML = '<tr><td colspan="4" style="text-align: center;">Erro ao carregar histórico</td></tr>'; 
     }
+}
 
     function aplicarFiltroHistorico() {
         const tipoAcao = document.getElementById('filtroTipoAcao')?.value || 'todos';
@@ -2089,58 +2094,90 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         renderizarHistoricoPagina();
     }
 
-    function renderizarHistoricoPagina() {
-        const inicio = (historicoPaginaAtual - 1) * historicoItensPorPagina;
-        const fim = inicio + historicoItensPorPagina;
-        const dadosPagina = historicoFiltrados.slice(inicio, fim);
-        const totalPaginas = Math.ceil(historicoFiltrados.length / historicoItensPorPagina);
-        const tbody = document.getElementById('historicoTableBody');
-        if (dadosPagina.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhum registro encontrado</td></tr>'; 
-        } else { 
-            const getBadgeClass = (acao) => { 
-                switch(acao) { 
-                    case 'criacao': return 'badge-criacao'; 
-                    case 'edicao': return 'badge-edicao'; 
-                    case 'exclusao': return 'badge-exclusao'; 
-                    case 'movimentacao': return 'badge-movimentacao'; 
-                    default: return 'badge-edicao'; 
-                } 
-            }; 
-            const getAcaoLabel = (acao) => { 
-                switch(acao) { 
-                    case 'criacao': return '➕ Criação'; 
-                    case 'edicao': return '✏️ Edição'; 
-                    case 'exclusao': return '🗑️ Exclusão'; 
-                    case 'movimentacao': return '🔄 Movimentação'; 
-                    default: return acao; 
-                } 
-            }; 
-            tbody.innerHTML = dadosPagina.map(log => `
-                <tr>
-                    <td style="white-space: nowrap;">${new Date(log.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
-                    <td>${log.usuario_nome || 'Sistema'}</td>
-                    <td><span class="badge-acao ${getBadgeClass(log.acao)}">${getAcaoLabel(log.acao)}</span></td>
-                    <td>${log.descricao}</td>
-                </tr>
-            `).join(''); 
+// Função auxiliar para formatar data/hora no padrão Brasil
+function formatarDataHoraBrasil(dataISO) {
+    if (!dataISO) return '-';
+    try {
+        // Se já estiver no formato correto, apenas formata
+        if (dataISO.includes('T') && !dataISO.includes('Z')) {
+            const [dataParte, horaParte] = dataISO.split('T');
+            const [ano, mes, dia] = dataParte.split('-');
+            const [hora, minuto, segundo] = horaParte.split(':');
+            return `${dia}/${mes}/${ano}, ${hora}:${minuto}:${segundo}`;
         }
-        const pagContainer = document.getElementById('paginationContainer');
-        if (totalPaginas <= 1) { 
-            pagContainer.innerHTML = ''; 
-        } else { 
-            let pagHtml = ''; 
-            pagHtml += `<button onclick="mudarPaginaHistorico(${historicoPaginaAtual - 1})" ${historicoPaginaAtual === 1 ? 'disabled' : ''}>◀ Anterior</button>`; 
-            for (let i = 1; i <= Math.min(totalPaginas, 5); i++) { 
-                pagHtml += `<button onclick="mudarPaginaHistorico(${i})" class="${historicoPaginaAtual === i ? 'active' : ''}">${i}</button>`; 
-            } 
-            if (totalPaginas > 5) { 
-                pagHtml += `<span>...</span><button onclick="mudarPaginaHistorico(${totalPaginas})">${totalPaginas}</button>`; 
-            } 
-            pagHtml += `<button onclick="mudarPaginaHistorico(${historicoPaginaAtual + 1})" ${historicoPaginaAtual === totalPaginas ? 'disabled' : ''}>Próximo ▶</button>`; 
-            pagContainer.innerHTML = pagHtml; 
-        }
+        
+        // Fallback: tenta converter normalmente
+        const data = new Date(dataISO);
+        if (isNaN(data.getTime())) return dataISO;
+        
+        const dia = String(data.getDate()).padStart(2, '0');
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const ano = data.getFullYear();
+        const hora = String(data.getHours()).padStart(2, '0');
+        const minuto = String(data.getMinutes()).padStart(2, '0');
+        const segundo = String(data.getSeconds()).padStart(2, '0');
+        
+        return `${dia}/${mes}/${ano}, ${hora}:${minuto}:${segundo}`;
+    } catch (e) {
+        console.error('Erro ao formatar data:', dataISO, e);
+        return dataISO;
     }
+}
+
+    function renderizarHistoricoPagina() {
+    const inicio = (historicoPaginaAtual - 1) * historicoItensPorPagina;
+    const fim = inicio + historicoItensPorPagina;
+    const dadosPagina = historico.slice(inicio, fim);
+    const totalPaginas = Math.ceil(historico.length / historicoItensPorPagina);
+    const tbody = document.getElementById('historicoTableBody');
+    
+    if (dadosPagina.length === 0) { 
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhum registro encontrado</td></tr>'; 
+    } else { 
+        const getBadgeClass = (acao) => { 
+            switch(acao) { 
+                case 'criacao': return 'badge-criacao'; 
+                case 'edicao': return 'badge-edicao'; 
+                case 'exclusao': return 'badge-exclusao'; 
+                case 'movimentacao': return 'badge-movimentacao'; 
+                default: return 'badge-edicao'; 
+            } 
+        }; 
+        const getAcaoLabel = (acao) => { 
+            switch(acao) { 
+                case 'criacao': return '➕ Criação'; 
+                case 'edicao': return '✏️ Edição'; 
+                case 'exclusao': return '🗑️ Exclusão'; 
+                case 'movimentacao': return '🔄 Movimentação'; 
+                default: return acao; 
+            } 
+        }; 
+        tbody.innerHTML = dadosPagina.map(log => `
+            <tr>
+                <td style="white-space: nowrap;">${formatarDataHoraBrasil(log.data_hora)}</td>
+                <td>${log.usuario_nome || 'Sistema'}</td>
+                <td><span class="badge-acao ${getBadgeClass(log.acao)}">${getAcaoLabel(log.acao)}</span></td>
+                <td>${log.descricao}</td>
+            </tr>
+        `).join(''); 
+    }
+    
+    const pagContainer = document.getElementById('paginationContainer');
+    if (totalPaginas <= 1) { 
+        pagContainer.innerHTML = ''; 
+    } else { 
+        let pagHtml = ''; 
+        pagHtml += `<button onclick="mudarPaginaHistorico(${historicoPaginaAtual - 1})" ${historicoPaginaAtual === 1 ? 'disabled' : ''}>◀ Anterior</button>`; 
+        for (let i = 1; i <= Math.min(totalPaginas, 5); i++) { 
+            pagHtml += `<button onclick="mudarPaginaHistorico(${i})" class="${historicoPaginaAtual === i ? 'active' : ''}">${i}</button>`; 
+        } 
+        if (totalPaginas > 5) { 
+            pagHtml += `<span>...</span><button onclick="mudarPaginaHistorico(${totalPaginas})">${totalPaginas}</button>`; 
+        } 
+        pagHtml += `<button onclick="mudarPaginaHistorico(${historicoPaginaAtual + 1})" ${historicoPaginaAtual === totalPaginas ? 'disabled' : ''}>Próximo ▶</button>`; 
+        pagContainer.innerHTML = pagHtml; 
+    }
+}
 
     function mudarPaginaHistorico(pagina) { 
         const totalPaginas = Math.ceil(historicoFiltrados.length / historicoItensPorPagina); 
@@ -2910,47 +2947,48 @@ window.abrirAnalitico = async function() {
                     </div>
                     
                     <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; background: white; padding: 20px; border-radius: 20px;">
-                        ${!isOperador ? `
-                        <div style="display: flex; flex-direction: column; gap: 5px; flex: 2; min-width: 250px; position: relative;">
-                            <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">🔍 BUSCAR USUÁRIO</label>
-                            <input type="text" id="analiticoBuscaUsuario" placeholder="Digite o nome do usuário..." autocomplete="off" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0; width: 100%;">
-                            <div id="analiticoSugestoes" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #E2E8F0; border-radius: 12px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; margin-top: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
-                            <div id="analiticoUsuarioSelecionado" style="margin-top: 8px; font-size: 0.8rem; color: #1E6DC3; font-weight: 500;"></div>
-                        </div>
-                        ` : `
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">👤 OPERADOR</label>
-                            <input type="text" id="analiticoFiltroOperador" value="${currentUser.nome}" readonly disabled style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0; background: #f0f0f0; cursor: not-allowed;">
-                        </div>
-                        `}
-                        <div style="display: flex; flex-direction: column; gap: 5px; flex: 1;">
-                            <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">🔍 CLIENTE</label>
-                            <input type="text" id="analiticoFiltroCliente" placeholder="Digite o nome do cliente..." style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">📅 DATA INICIAL</label>
-                            <input type="date" id="analiticoDataInicio" value="${dataInicioPadrao}" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">📅 DATA FINAL</label>
-                            <input type="date" id="analiticoDataFim" value="${dataFimPadrao}" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">🏷️ TIPO COMISSÃO</label>
-                            <select id="analiticoTipo" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
-                                <option value="todos">Todos</option>
-                                <option value="direto">Direto/Integral</option>
-                                <option value="extra">Extra</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; gap: 10px;">
-    <button id="btnFiltrarConferidos" style="background: #17A2B8; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">☑️ Conferidos</button>
-    <button id="btnCopiarColuna" style="background: #28A745; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">📋 Copiar Coluna</button>
-    <button id="btnExportarExcel" style="background: #17A2B8; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">📎 Exportar Excel</button>
-    <button id="btnBuscarAnalitico" style="background: #1E6DC3; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">🔍 BUSCAR</button>
-    <button id="btnLimparFiltros" style="background: #6C757D; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">🗑️ LIMPAR</button>
+    ${!isOperador ? `
+    <div style="display: flex; flex-direction: column; gap: 5px; flex: 2; min-width: 250px; position: relative;">
+        <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">🔍 BUSCAR USUÁRIO</label>
+        <input type="text" id="analiticoBuscaUsuario" placeholder="Digite o nome do usuário..." autocomplete="off" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0; width: 100%;">
+        <div id="analiticoSugestoes" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #E2E8F0; border-radius: 12px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; margin-top: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+        <div id="analiticoUsuarioSelecionado" style="margin-top: 8px; font-size: 0.8rem; color: #1E6DC3; font-weight: 500;"></div>
+    </div>
+    ` : `
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">👤 OPERADOR</label>
+        <input type="text" id="analiticoFiltroOperador" value="${currentUser.nome}" readonly disabled style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0; background: #f0f0f0; cursor: not-allowed;">
+    </div>
+    `}
+    <!-- 🔥 CAMPO DE BUSCA ÚNICO (substitui Cliente e NR Documento) -->
+    <div style="display: flex; flex-direction: column; gap: 5px; flex: 2;">
+        <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">🔍 BUSCAR (Cliente / Documento)</label>
+        <input type="text" id="analiticoBuscaGeral" placeholder="Digite o nome do cliente ou número do documento..." style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">📅 DATA INICIAL</label>
+        <input type="date" id="analiticoDataInicio" value="${dataInicioPadrao}" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">📅 DATA FINAL</label>
+        <input type="date" id="analiticoDataFim" value="${dataFimPadrao}" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label style="font-size: 0.7rem; font-weight: 700; color: #5F7F9E;">🏷️ TIPO COMISSÃO</label>
+        <select id="analiticoTipo" style="padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
+            <option value="todos">Todos</option>
+            <option value="direto">Direto/Integral</option>
+            <option value="extra">Extra</option>
+        </select>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button id="btnFiltrarConferidos" style="background: #17A2B8; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">☑️ Conferidos</button>
+        <button id="btnCopiarColuna" style="background: #28A745; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">📋 Copiar Coluna</button>
+        <button id="btnExportarExcel" style="background: #17A2B8; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">📎 Exportar Excel</button>
+        <button id="btnBuscarAnalitico" style="background: #1E6DC3; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">🔍 BUSCAR</button>
+        <button id="btnLimparFiltros" style="background: #6C757D; color: white; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 600;">🗑️ LIMPAR</button>
+    </div>
 </div>
-                    </div>
                     
                     <div style="background: white; border-radius: 20px; overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
@@ -3343,8 +3381,15 @@ window.filtrarAnaliticoAgrupado = function() {
         }
     }
     
-    const filtroCliente = document.getElementById('analiticoFiltroCliente')?.value.toLowerCase() || '';
-    if (filtroCliente) registrosFiltrados = registrosFiltrados.filter(reg => (reg.cliente || '').toLowerCase().includes(filtroCliente));
+    // 🔥 NOVO FILTRO ÚNICO - Busca por Cliente OU Documento
+    const buscaGeral = document.getElementById('analiticoBuscaGeral')?.value.toLowerCase() || '';
+    if (buscaGeral) {
+        registrosFiltrados = registrosFiltrados.filter(reg => {
+            const cliente = (reg.cliente || '').toLowerCase();
+            const nrDoc = (reg.nr_documento || reg.NrDocumento || reg.titulo || '').toLowerCase();
+            return cliente.includes(buscaGeral) || nrDoc.includes(buscaGeral);
+        });
+    }
     
     const dataInicio = document.getElementById('analiticoDataInicio')?.value;
     const dataFim = document.getElementById('analiticoDataFim')?.value;
@@ -3361,7 +3406,7 @@ window.filtrarAnaliticoAgrupado = function() {
         });
     }
     
-        // SALVAR OS DADOS FILTRADOS E RESETAR PÁGINA (usando variáveis globais)
+    // SALVAR OS DADOS FILTRADOS E RESETAR PÁGINA
     analiticoDadosFiltradosGlobal = registrosFiltrados;
     analiticoPaginaAtualGlobal = 1;
     renderizarPaginaAnaliticoGlobal();
@@ -3393,8 +3438,10 @@ window.limparFiltrosAnaliticoAgrupado = function() {
     let dataMax = datas.length > 0 ? new Date(Math.max(...datas)) : new Date();
     const formatarDataInput = (data) => data.toISOString().split('T')[0];
     
-    const clienteInput = document.getElementById('analiticoFiltroCliente');
-    if (clienteInput) clienteInput.value = '';
+    // 🔥 LIMPAR CAMPO DE BUSCA ÚNICO
+    const buscaGeralInput = document.getElementById('analiticoBuscaGeral');
+    if (buscaGeralInput) buscaGeralInput.value = '';
+    
     const tipoSelect = document.getElementById('analiticoTipo');
     if (tipoSelect) tipoSelect.value = 'todos';
     const dataInicio = document.getElementById('analiticoDataInicio');
@@ -3755,42 +3802,146 @@ window.limparFiltrosAnalitico = function() {
     }
 
     function carregarVisaoSetor() {
-        const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
-        const metaSetor = getMetaSetor();
-        let totalRecebidoSetor = 0;
+    console.log('🔄 Carregando Visão do Setor - Usuário:', currentUser?.nome, 'Cargo:', currentUser?.cargo);
+    
+    const mes = new Date().getMonth() + 1;
+    const ano = new Date().getFullYear();
+    const metaSetor = getMetaSetor();
+    
+    console.log('Meta do Setor:', formatMoney(metaSetor));
+    
+    let totalRecebidoSetor = 0;
+    let dadosEquipes = [];
+    
+    // Para supervisor, vamos mostrar os dados de TODAS as equipes (igual ao operador)
+    // Mas vamos destacar a equipe do supervisor se ele tiver uma
+    
+    for (let eq of equipes) {
+        let totalEquipe = 0;
+        let membrosCount = 0;
         
-        for(let eq of equipes) {
-            const membros = usuarios.filter(u => u.equipe_id === eq.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
-            for(let m of membros) { 
-                const mo = metas.find(meta=> meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano); 
-                if(mo) totalRecebidoSetor += mo.recebido || 0; 
+        // Buscar TODOS os membros da equipe (operadores, elite, e também o supervisor se estiver na equipe)
+        const membros = usuarios.filter(u => u.equipe_id === eq.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+        
+        console.log(`Equipe ${eq.nome}: ${membros.length} membros`);
+        
+        // Somar recebido dos membros
+        for (let m of membros) {
+            const metaUsuario = metas.find(meta => meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano);
+            if (metaUsuario && metaUsuario.recebido) {
+                totalEquipe += metaUsuario.recebido;
+                totalRecebidoSetor += metaUsuario.recebido;
+                membrosCount++;
+                console.log(`  - ${m.nome}: ${formatMoney(metaUsuario.recebido)}`);
             }
         }
         
-        const projecaoSetor = calcularProjecao(metaSetor, totalRecebidoSetor);
-        const projecaoHex = getProjecaoColorHex(projecaoSetor);
-        const esperadoSetor = calcularEsperado(metaSetor);
-        const diferenca = totalRecebidoSetor - esperadoSetor;
-        const circumference = 2 * Math.PI * 80;
-        const dashArray = (projecaoSetor / 100) * circumference;
-        
-        let equipesData = [];
-        for(let eq of equipes) {
-            equipesData.push({ nome: eq.nome });
+        // Também somar o supervisor se ele estiver nesta equipe e tiver recebido
+        const supervisorEquipe = usuarios.find(u => u.equipe_id === eq.id && u.cargo === 'supervisor' && u.status === 'ativo');
+        if (supervisorEquipe) {
+            const metaSup = metas.find(meta => meta?.usuario_id === supervisorEquipe.id && meta?.mes === mes && meta?.ano === ano);
+            if (metaSup && metaSup.recebido) {
+                totalEquipe += metaSup.recebido;
+                totalRecebidoSetor += metaSup.recebido;
+                membrosCount++;
+                console.log(`  - ${supervisorEquipe.nome} (Supervisor): ${formatMoney(metaSup.recebido)}`);
+            }
         }
         
-        const rankingEquipes = [...equipesData].sort((a,b) => a.nome.localeCompare(b.nome));
-        
-        const html = `
-            <div class="supervisor-metrics-grid">
-                <div class="metric-card"><div class="metric-title">💰 TOTAL RECEBIDO DO SETOR</div><div class="metric-value">${formatMoney(totalRecebidoSetor)}</div><div class="metric-sub">Meta do Setor: ${formatMoney(metaSetor)}</div></div>
-                <div class="metric-card"><div class="metric-title">📈 PROJEÇÃO DO SETOR</div><div class="circle-chart-container"><div class="circle-chart"><svg viewBox="0 0 200 200"><circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/><circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/></svg><div class="percentage-text" style="color: ${projecaoHex}">${projecaoSetor.toFixed(1)}%</div></div></div></div>
-                <div class="metric-card"><div class="metric-title">🎯 VALOR ESPERADO DO SETOR</div><div class="metric-value">${formatMoney(esperadoSetor)}</div><div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div></div>
-                <div class="metric-card"><div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div><div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}</div><div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div></div>
-            </div>
-            <div class="ranking-operador"><h4>🏆 Equipes do Setor</h4><ul class="ranking-list">${rankingEquipes.map((eq, idx) => `<li><div class="ranking-position">${idx+1}</div><div class="ranking-name">${eq.nome}</div></li>`).join('')}</ul></div>`;
-        document.getElementById('visaoSetorContent').innerHTML = html;
+        dadosEquipes.push({
+            nome: eq.nome,
+            total: totalEquipe,
+            membros: membrosCount,
+            id: eq.id
+        });
     }
+    
+    // Se não há dados, mostra mensagem
+    if (dadosEquipes.length === 0 || totalRecebidoSetor === 0) {
+        console.log('⚠️ Nenhum dado encontrado!');
+        document.getElementById('visaoSetorContent').innerHTML = `
+            <div class="no-data-message" style="text-align: center; padding: 40px;">
+                <p>📭 Nenhum dado encontrado para o setor.</p>
+                <p>Não há registros de recebimento para o período atual.</p>
+                <p style="margin-top: 15px; font-size: 0.8rem; color: #666;">💡 Dica: Importe dados ou verifique se as metas estão cadastradas.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Ordenar equipes por total recebido (maior para menor)
+    dadosEquipes.sort((a, b) => b.total - a.total);
+    
+    // Calcular projeções do setor
+    const projecaoSetor = metaSetor > 0 ? (totalRecebidoSetor / (metaSetor / getDiasUteis() * getDiasPassados())) * 100 : 0;
+    const projecaoSetorFinal = Math.min(Math.max(projecaoSetor, 0), 200); // Limitar entre 0 e 200%
+    const projecaoHex = getProjecaoColorHex(projecaoSetorFinal);
+    const esperadoSetor = metaSetor > 0 ? (metaSetor / getDiasUteis()) * getDiasPassados() : 0;
+    const diferenca = totalRecebidoSetor - esperadoSetor;
+    const circumference = 2 * Math.PI * 80;
+    const dashArray = (Math.min(projecaoSetorFinal, 100) / 100) * circumference;
+    
+    // Verificar se o usuário atual tem equipe (para destacar)
+    const equipeDoUsuario = currentUser?.equipe_id ? equipes.find(e => e.id === currentUser.equipe_id) : null;
+    
+    const html = `
+        <div style="margin-bottom: 20px;">
+            <h4 style="color: #0F3B6F; margin-bottom: 10px;">🏢 Visão Geral do Setor</h4>
+            ${equipeDoUsuario ? `<div style="text-align: center; margin-bottom: 20px; color: #5F7F9E; font-size: 0.85rem;">📌 Sua equipe: <strong>${equipeDoUsuario.nome}</strong></div>` : ''}
+        </div>
+        <div class="supervisor-metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">💰 TOTAL RECEBIDO DO SETOR</div>
+                <div class="metric-value">${formatMoney(totalRecebidoSetor)}</div>
+                <div class="metric-sub">Meta do Setor: ${formatMoney(metaSetor)}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">📈 PROJEÇÃO DO SETOR</div>
+                <div class="circle-chart-container">
+                    <div class="circle-chart">
+                        <svg viewBox="0 0 200 200">
+                            <circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/>
+                            <circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/>
+                        </svg>
+                        <div class="percentage-text" style="color: ${projecaoHex}">${projecaoSetorFinal.toFixed(1)}%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🎯 VALOR ESPERADO</div>
+                <div class="metric-value">${formatMoney(esperadoSetor)}</div>
+                <div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div>
+                <div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">
+                    ${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}
+                </div>
+                <div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div>
+            </div>
+        </div>
+        <div class="ranking-operador">
+            <h4>🏆 Equipes do Setor - Ranking por Recebimento</h4>
+            ${dadosEquipes.filter(e => e.total > 0).length > 0 ? `
+                <ul class="ranking-list">
+                    ${dadosEquipes.filter(e => e.total > 0).map((eq, idx) => `
+                        <li style="${equipeDoUsuario && eq.id === equipeDoUsuario.id ? 'background: #EFF6FF; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
+                            <div class="ranking-position" style="${equipeDoUsuario && eq.id === equipeDoUsuario.id ? 'background: #28A745;' : ''}">${idx + 1}</div>
+                            <div class="ranking-name" style="${equipeDoUsuario && eq.id === equipeDoUsuario.id ? 'font-weight: 800; color: #1E6DC3;' : ''}">
+                                ${eq.nome} ${equipeDoUsuario && eq.id === equipeDoUsuario.id ? ' (Sua Equipe)' : ''}
+                            </div>
+                            <div class="ranking-value">${formatMoney(eq.total)}</div>
+                            <div class="ranking-proj">${eq.membros} membro(s)</div>
+                        </li>
+                    `).join('')}
+                </ul>
+            ` : '<p class="no-data-message">Nenhuma equipe com dados de recebimento encontrada.</p>'}
+        </div>
+    `;
+    
+    document.getElementById('visaoSetorContent').innerHTML = html;
+    console.log('✅ Visão do Setor carregada! Total:', formatMoney(totalRecebidoSetor));
+}
 
     function carregarSupervisorDashboard() {
         const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
@@ -4795,13 +4946,15 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
             carregarOperadoresTabGestor();
             carregarHistorico();
         } else if(currentUser?.cargo === 'supervisor') {
-            carregarSupervisorDashboard(); 
-            carregarEquipesTabGestor(); 
-            carregarAdminReformuladoGestor(); 
-            carregarSupervisoresGestor(); 
-            carregarOperadoresTabGestor(); 
-            carregarHistorico();
-        } else if(currentUser?.cargo === 'elite') {
+    carregarSupervisorDashboard(); 
+    carregarEquipesTabGestor(); 
+    carregarAdminReformuladoGestor(); 
+    carregarSupervisoresGestor(); 
+    carregarOperadoresTabGestor(); 
+    carregarHistorico();
+    // 🔥 ADICIONE ESTAS LINHAS
+    carregarVisaoSetor();
+} else if(currentUser?.cargo === 'elite') {
             carregarEliteDashboard();
             carregarEquipesTabGestor(); 
             carregarAdminReformuladoGestor(); 
@@ -4845,7 +4998,7 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
         if(tab==='dashboard' && currentUser?.cargo === 'operador') carregarOperadorDashboard();
         if(tab==='dashboard' && currentUser?.cargo === 'elite') carregarEliteDashboard();
         if(tab==='visaoEquipe' && (currentUser?.cargo === 'operador' || currentUser?.cargo === 'elite')) carregarVisaoEquipe();
-        if(tab==='visaoSetor' && (currentUser?.cargo === 'operador' || currentUser?.cargo === 'elite')) carregarVisaoSetor();
+        if(tab==='visaoSetor' && (currentUser?.cargo === 'operador' || currentUser?.cargo === 'elite' || currentUser?.cargo === 'supervisor')) carregarVisaoSetor();
     };
 
     // ============================================
@@ -4853,26 +5006,43 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
     // ============================================
 
     function garantirBotaoAnalitico() {
-        let btn = document.getElementById('btnAnalitico');
+    let btn = document.getElementById('btnAnalitico');
+    
+    // Verificar se o usuário atual pode ter o botão (todos menos operador? ou todos?)
+    // Vamos permitir para todos os perfis
+    const podeTerBotao = currentUser && (currentUser.cargo === 'gestor' || currentUser.cargo === 'supervisor' || currentUser.cargo === 'elite' || currentUser.cargo === 'operador');
+    
+    if (!podeTerBotao) return;
+    
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'btnAnalitico';
+        btn.className = 'btn-analitico';
+        btn.innerHTML = '📊 Analítico';
+        btn.onclick = function() { abrirAnalitico(); };
+        btn.style.cssText = 'display: inline-block; background: #28A745; color: white; border: none; padding: 12px 28px; border-radius: 40px; cursor: pointer; font-weight: 700; font-size: 0.9rem; margin-left: auto;';
         
-        if (!btn) {
-            btn = document.createElement('button');
-            btn.id = 'btnAnalitico';
-            btn.className = 'btn-analitico';
-            btn.innerHTML = '📊 Analítico';
-            btn.onclick = function() { abrirAnalitico(); };
-            btn.style.cssText = 'display: inline-block; background: #28A745; color: white; border: none; padding: 12px 28px; border-radius: 40px; cursor: pointer; font-weight: 700; font-size: 0.9rem; margin-left: auto;';
-            
-            const motivationalDiv = document.getElementById('motivationalMessage');
-            if (motivationalDiv) {
-                motivationalDiv.appendChild(btn);
-                console.log('✅ Botão Analítico criado');
-            }
-        } else {
-            btn.style.display = 'inline-block';
-            btn.style.visibility = 'visible';
+        const motivationalDiv = document.getElementById('motivationalMessage');
+        if (motivationalDiv && !document.getElementById('btnAnalitico')) {
+            motivationalDiv.appendChild(btn);
+            console.log('✅ Botão Analítico criado para:', currentUser?.cargo);
         }
+    } else {
+        btn.style.display = 'inline-block';
+        btn.style.visibility = 'visible';
     }
+}
+
+// Também adicione uma chamada mais robusta no carregamento do dashboard:
+function carregarDashboard() {
+    if(!currentUser) return;
+    // ... código existente ...
+    
+    // Forçar criação do botão analítico
+    setTimeout(() => {
+        garantirBotaoAnalitico();
+    }, 200);
+}
 
     document.addEventListener('DOMContentLoaded', garantirBotaoAnalitico);
     setTimeout(garantirBotaoAnalitico, 500);
@@ -4898,8 +5068,11 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
             if(currentUser.cargo === 'gestor' || currentUser.cargo === 'supervisor' || currentUser.cargo === 'elite') {
                 tabsHtml += `<button class="tab-btn" onclick="switchTab('admin', event)">⚙️ Painel Admin</button><button class="tab-btn" onclick="switchTab('operadores', event)">📋 Usuários</button><button class="tab-btn" onclick="switchTab('equipes', event)">👥 Equipes</button><button class="tab-btn" onclick="switchTab('usuarios', event)">👔 Supervisores</button><button class="tab-btn" onclick="switchTab('historico', event)">📜 Histórico</button>`;
             } 
-            if(currentUser.cargo === 'supervisor' || currentUser.cargo === 'operador' || currentUser.cargo === 'elite') {
+            if(currentUser.cargo === 'operador' || currentUser.cargo === 'elite') {
     tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoEquipe', event)">👥 Visão da Equipe</button>`;
+    tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoSetor', event)">🏢 Visão do Setor</button>`;
+}
+if(currentUser.cargo === 'supervisor') {
     tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoSetor', event)">🏢 Visão do Setor</button>`;
 }
             document.getElementById('tabsContainer').innerHTML = tabsHtml;
@@ -4913,13 +5086,15 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
                 carregarOperadoresTabGestor();
                 carregarHistorico();
             } else if(currentUser.cargo === 'supervisor') {
-                carregarSupervisorDashboard(); 
-                carregarEquipesTabGestor(); 
-                carregarAdminReformuladoGestor(); 
-                carregarSupervisoresGestor(); 
-                carregarOperadoresTabGestor(); 
-                carregarHistorico();
-            } else if(currentUser.cargo === 'elite') {
+    carregarSupervisorDashboard(); 
+    carregarEquipesTabGestor(); 
+    carregarAdminReformuladoGestor(); 
+    carregarSupervisoresGestor(); 
+    carregarOperadoresTabGestor(); 
+    carregarHistorico();
+    // 🔥 ADICIONE ESTAS LINHAS PARA O SUPERVISOR
+    carregarVisaoSetor();
+} else if(currentUser.cargo === 'elite') {
                 carregarEliteDashboard();
                 carregarEquipesTabGestor(); 
                 carregarAdminReformuladoGestor(); 
