@@ -1883,7 +1883,7 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
             mensagem = `🎉 PARABÉNS! Meta batida e projeção superior a 100%!`;
         } else if (metaValor > 0) {
             const faltaMeta = metaValor - recebidoAtual;
-            mensagem = `🚀 Faltam ${formatMoney(faltaMeta)} para bater sua meta!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `🚀 Faltam ${formatMoney(faltaMeta)} para bater sua meta!<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
             mensagem = `🏆 Você está no Topo! Projeção superior a 100%!`;
         }
@@ -1892,7 +1892,7 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         valorNecessario = 0;
     }
     else if (projecaoAtual >= 80) {
-        quartilAtual = '📈 2º Quartil';
+        quartilAtual = '2º Quartil';
         
         // Calcular quanto falta de RECEBIDO para atingir 100% de projeção (1º Quartil)
         const esperadoAtual = (metaValor / getDiasUteis()) * diasPassados;
@@ -1900,11 +1900,11 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         valorNecessario = recebidoNecessario100 - recebidoAtual;
         
         if (valorNecessario > 0) {
-            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 1º Quartil<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 1º Quartil<br><span style="font-size: 0.85rem; opacity: 1.0;"> ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
-            mensagem = `🎯 Você já atingiu a meta para o 1º Quartil!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `🎯 Você já atingiu a meta para o 1º Quartil!<br><span style="font-size: 0.85rem; opacity: 1.0;"> ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         }
-        icone = '📈';
+        icone = '';
         corBg = '#1E6DC3';
     }
     else if (projecaoAtual >= 40) {
@@ -1916,9 +1916,9 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         valorNecessario = recebidoNecessario80 - recebidoAtual;
         
         if (valorNecessario > 0) {
-            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 2º Quartil<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 2º Quartil<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
-            mensagem = `📊 Você já atingiu a meta para o 2º Quartil!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `📊 Você já atingiu a meta para o 2º Quartil!<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         }
         icone = '⚠️';
         corBg = '#FFC107';
@@ -1932,9 +1932,9 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         valorNecessario = recebidoNecessario40 - recebidoAtual;
         
         if (valorNecessario > 0) {
-            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 3º Quartil<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 3º Quartil<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
-            mensagem = `⚠️ Você já atingiu a meta para o 3º Quartil!<br><span style="font-size: 0.75rem; opacity: 0.9;">📊 ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `⚠️ Você já atingiu a meta para o 3º Quartil!<br><span style="font-size: 0.85rem; opacity: 1.0> {percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         }
         icone = '⚡';
         corBg = '#DC3545';
@@ -4218,7 +4218,7 @@ window.limparFiltrosAnalitico = function() {
             </div>
         </div>
         <div class="stats-grid">
-            <div class="stat-chart"><h4>📊 Alcance da Meta por Equipe</h4>${equipesData.map(eq => `<div style="margin-bottom:20px;"><div style="display:flex; justify-content:space-between;"><strong>${eq.nome}</strong><span>${eq.alcance.toFixed(1)}%</span></div><div class="progress-bar-simple"><div class="progress-fill" style="width: ${Math.min(eq.alcance,100)}%; background: ${eq.alcance>=100?'#1E7B4B':'#1E6DC3'};">${formatMoney(eq.recebido)}</div></div></div>`).join('')}</div>
+            <div class="stat-chart"><h4>Alcance da Meta por Equipe</h4>${equipesData.map(eq => `<div style="margin-bottom:20px;"><div style="display:flex; justify-content:space-between;"><strong>${eq.nome}</strong><span>${eq.alcance.toFixed(1)}%</span></div><div class="progress-bar-simple"><div class="progress-fill" style="width: ${Math.min(eq.alcance,100)}%; background: ${eq.alcance>=100?'#1E7B4B':'#1E6DC3'};">${formatMoney(eq.recebido)}</div></div></div>`).join('')}</div>
             <div class="stat-chart"><h4>🏆 Projeção por Equipe (Ranking)</h4>${[...equipesData].sort((a,b) => b.projecao - a.projecao).map((eq, idx) => `<div style="margin-bottom:20px;"><div style="display:flex; justify-content:space-between;"><strong>${idx+1}º - ${eq.nome}</strong><span>${eq.projecao.toFixed(1)}%</span></div><div class="progress-bar-simple"><div class="progress-fill" style="width: ${Math.min(eq.projecao,100)}%; background: ${eq.projecao>=100?'#1E7B4B':eq.projecao>=80?'#1E6DC3':'#F5A623'};">${eq.projecao.toFixed(1)}%</div></div></div>`).join('')}</div>
         </div>`;
     document.getElementById('motivationalMessage').innerHTML = "📊 Visão Geral do Setor";
