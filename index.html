@@ -5229,16 +5229,7 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
     }
 }
 
-// Também adicione uma chamada mais robusta no carregamento do dashboard:
-function carregarDashboard() {
-    if(!currentUser) return;
-    // ... código existente ...
-    
-    // Forçar criação do botão analítico
-    setTimeout(() => {
-        garantirBotaoAnalitico();
-    }, 200);
-}
+
 
     document.addEventListener('DOMContentLoaded', garantirBotaoAnalitico);
     setTimeout(garantirBotaoAnalitico, 500);
