@@ -2183,10 +2183,6 @@ function calcularQuartilOperador(operadorAtual, operadorRecebido, metaOperador) 
             }
         }
         
-        console.log('📅 Configurações carregadas:', configuracoes);
-        console.log('📅 Total dias úteis:', configuracoes.total_dias_uteis);
-        console.log('📅 Dias passados:', configuracoes.dias_passados);
-        
         // 🔥 ADICIONE ESTA LINHA - FORÇA A ATUALIZAÇÃO
         setTimeout(atualizarDiasUteis, 100);
         
@@ -2943,7 +2939,6 @@ async function processarImportacaoComFeedback(jsonData) {
         let url = `${SUPABASE_URL}/rest/v1/recebimentos?select=*&order=data_pagamento.desc`;
         if (usuarioId) {
             url += `&usuario_id=eq.${usuarioId}`;
-            console.log(`🔍 Buscando registros do usuário ID: ${usuarioId}`);
         }
         const res = await fetch(url, { 
             headers: { 
@@ -2953,7 +2948,6 @@ async function processarImportacaoComFeedback(jsonData) {
         });
         if (res.ok) {
             const data = await res.json();
-            console.log(`📥 Carregados ${data.length} registros do banco${usuarioId ? ` para usuário ${usuarioId}` : ''}`);
             return data;
         }
         console.warn('Erro ao carregar registros:', res.status);
@@ -3540,9 +3534,31 @@ window.filtrarAnaliticoAgrupado = function() {
     }
     
     const dataInicio = document.getElementById('analiticoDataInicio')?.value;
-    const dataFim = document.getElementById('analiticoDataFim')?.value;
-    if (dataInicio) { const inicio = new Date(dataInicio); inicio.setHours(0,0,0,0); registrosFiltrados = registrosFiltrados.filter(reg => { const dataPgto = reg.data_pagamento ? new Date(reg.data_pagamento) : null; return dataPgto && dataPgto >= inicio; }); }
-    if (dataFim) { const fim = new Date(dataFim); fim.setHours(23,59,59,999); registrosFiltrados = registrosFiltrados.filter(reg => { const dataPgto = reg.data_pagamento ? new Date(reg.data_pagamento) : null; return dataPgto && dataPgto <= fim; }); }
+const dataFim = document.getElementById('analiticoDataFim')?.value;
+
+if (dataInicio) {
+    // Criar data no formato local (YYYY-MM-DD) sem timezone
+    const [ano, mes, dia] = dataInicio.split('-');
+    const inicio = new Date(ano, mes - 1, dia, 0, 0, 0);
+    registrosFiltrados = registrosFiltrados.filter(reg => {
+        if (!reg.data_pagamento) return false;
+        const dataPgto = new Date(reg.data_pagamento);
+        // Comparar apenas ano, mês e dia (ignorar hora)
+        const dataPgtoStr = `${dataPgto.getFullYear()}-${String(dataPgto.getMonth() + 1).padStart(2, '0')}-${String(dataPgto.getDate()).padStart(2, '0')}`;
+        return dataPgtoStr >= dataInicio;
+    });
+}
+
+if (dataFim) {
+    const [ano, mes, dia] = dataFim.split('-');
+    const fim = new Date(ano, mes - 1, dia, 23, 59, 59);
+    registrosFiltrados = registrosFiltrados.filter(reg => {
+        if (!reg.data_pagamento) return false;
+        const dataPgto = new Date(reg.data_pagamento);
+        const dataPgtoStr = `${dataPgto.getFullYear()}-${String(dataPgto.getMonth() + 1).padStart(2, '0')}-${String(dataPgto.getDate()).padStart(2, '0')}`;
+        return dataPgtoStr <= dataFim;
+    });
+}
     
     const tipo = document.getElementById('analiticoTipo')?.value || 'todos';
     if (tipo !== 'todos') {
@@ -3776,11 +3792,98 @@ window.limparFiltrosAnalitico = function() {
     showToast('🧹 Filtros limpos! Mostrando todos os registros.');
 };
 
-    // ============================================
-    // DASHBOARDS
-    // ============================================
-    
-    function carregarOperadorDashboard() {
+// ============================================
+// FUNÇÃO PARA CALCULAR RECEBIDO DA BAIXA ANTERIOR (CORRIGIDA)
+// ============================================
+
+async function calcularRecebidoBaixaAnterior(usuarioId) {
+    try {
+        const registros = await carregarRegistrosRecebimentos(usuarioId);
+        
+        if (!registros || registros.length === 0) {
+            return { valor: 0, mensagem: 'Nenhum registro encontrado' };
+        }
+        
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        let dataInicio, dataFim;
+        let diasConsiderados = [];
+        const diaSemana = hoje.getDay();
+        
+        if (diaSemana === 1) {
+            dataInicio = new Date(hoje);
+            dataInicio.setDate(hoje.getDate() - 3);
+            dataFim = new Date(hoje);
+            dataFim.setDate(hoje.getDate() - 1);
+            diasConsiderados = ['Sexta-feira', 'Sábado', 'Domingo'];
+        } else if (diaSemana === 0) {
+            dataInicio = new Date(hoje);
+            dataInicio.setDate(hoje.getDate() - 1);
+            dataFim = new Date(hoje);
+            dataFim.setDate(hoje.getDate() - 1);
+            diasConsiderados = ['Sábado'];
+        } else {
+            dataInicio = new Date(hoje);
+            dataInicio.setDate(hoje.getDate() - 1);
+            dataFim = new Date(hoje);
+            dataFim.setDate(hoje.getDate() - 1);
+            const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+            const diaAnterior = new Date(hoje);
+            diaAnterior.setDate(hoje.getDate() - 1);
+            diasConsiderados = [diasSemana[diaAnterior.getDay()]];
+        }
+        
+        dataInicio.setHours(0, 0, 0, 0);
+        dataFim.setHours(23, 59, 59, 999);
+        
+        
+        let totalRecebido = 0;
+        let registrosEncontrados = [];
+        
+        for (const registro of registros) {
+            if (registro.data_pagamento) {
+                const dataPagamento = new Date(registro.data_pagamento);
+                dataPagamento.setHours(0, 0, 0, 0);
+                
+                if (dataPagamento >= dataInicio && dataPagamento <= dataFim) {
+                    totalRecebido += registro.valor_recebido || 0;
+                    registrosEncontrados.push(registro);
+                }
+            }
+        }
+        
+        // Log do resultado (apenas uma linha)
+        //console.log(`💰 Baixa Anterior: ${formatMoney(totalRecebido)} (${registrosEncontrados.length} registros)`);
+        
+        let mensagem = '';
+        if (diasConsiderados.length === 1) {
+            mensagem = `Recebido no dia ${diasConsiderados[0]}`;
+        } else {
+            mensagem = `Recebido em ${diasConsiderados.join(', ')}`;
+        }
+        
+        if (totalRecebido === 0) {
+            mensagem += `\nNenhum recebimento encontrado no período.`;
+        } else {
+            mensagem += `\n${registrosEncontrados.length} registro(s) encontrado(s).`;
+        }
+        
+        return {
+            valor: totalRecebido,
+            mensagem: mensagem,
+            dias: diasConsiderados,
+            registros: registrosEncontrados,
+            periodo: { inicio: dataInicio, fim: dataFim }
+        };
+        
+    } catch (error) {
+        console.error('Erro ao calcular recebido da baixa anterior:', error);
+        return { valor: 0, mensagem: 'Erro ao carregar dados', registros: [] };
+    }
+}
+
+function carregarOperadorDashboard() {
     const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
     const metaOperador = metas.find(m => m?.usuario_id === currentUser.id && m?.mes === mes && m?.ano === ano) || { meta: 0, direto: 0, extra: 0, recebido: 0 };
     const metaValor = metaOperador.meta;
@@ -3804,7 +3907,7 @@ window.limparFiltrosAnalitico = function() {
     // 🔥 CARD DO QUARTIL
     const quartilCard = quartilInfo ? `
         <div class="metric-card" style="background: linear-gradient(135deg, #0A2F44, ${quartilInfo.corBg}); color: white;">
-            <div class="metric-title" style="color: rgba(255,255,255,0.9);">${quartilInfo.icone}ANÁLISE POR QUARTIL</div>
+            <div class="metric-title" style="color: rgba(255,255,255,0.9);">${quartilInfo.icone} ANÁLISE POR QUARTIL</div>
             <div class="metric-value" style="color: white; font-size: 1rem;">${quartilInfo.quartilAtual}</div>
             <div class="metric-sub" style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 0.85rem;">${quartilInfo.mensagem}</div>
         </div>
@@ -3820,30 +3923,41 @@ window.limparFiltrosAnalitico = function() {
     const posicaoAtual = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).findIndex(m => m.id === currentUser.id) + 1;
     
     const operadorHtml = `
-    <div class="operador-metrics-grid">
-        <div class="metric-card"><div class="metric-title">💰 TOTAL RECEBIDO</div><div class="metric-value">${formatMoney(recebido)}</div><div class="metric-sub">Meta Individual: ${formatMoney(metaValor)}</div></div>
-        <div class="metric-card"><div class="metric-title">⚡ RECEBIMENTO DIRETO</div><div class="metric-value" style="color: #1E6DC3;">${formatMoney(metaOperador.direto || 0)}</div><div class="metric-sub">Comissão Integral</div></div>
-        <div class="metric-card"><div class="metric-title">✨ RECEBIMENTO EXTRA</div><div class="metric-value" style="color: #FFC107;">${formatMoney(metaOperador.extra || 0)}</div><div class="metric-sub">Comissão Extra</div></div>
-        <div class="metric-card"><div class="metric-title">📈 PROJEÇÃO</div><div class="circle-chart-container"><div class="circle-chart"><svg viewBox="0 0 200 200"><circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/><circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/></svg><div class="percentage-text" style="color: ${projecaoHex}">${projecao.toFixed(1)}%</div></div></div></div>
-        <div class="metric-card"><div class="metric-title">🎯 VALOR ESPERADO</div><div class="metric-value">${formatMoney(esperado)}</div><div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div></div>
-        <div class="metric-card"><div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div><div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}</div><div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div></div>
-        ${quartilCard}
+<!-- PRIMEIRA LINHA: 4 CARDS -->
+<div class="operador-metrics-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="metric-card"><div class="metric-title">💰 TOTAL RECEBIDO</div><div class="metric-value">${formatMoney(recebido)}</div><div class="metric-sub">Meta Individual: ${formatMoney(metaValor)}</div></div>
+    <div class="metric-card"><div class="metric-title">⚡ RECEBIMENTO DIRETO</div><div class="metric-value" style="color: #1E6DC3;">${formatMoney(metaOperador.direto || 0)}</div><div class="metric-sub">Comissão Integral</div></div>
+    <div class="metric-card"><div class="metric-title">✨ RECEBIMENTO EXTRA</div><div class="metric-value" style="color: #FFC107;">${formatMoney(metaOperador.extra || 0)}</div><div class="metric-sub">Comissão Extra</div></div>
+    <div class="metric-card"><div class="metric-title">📈 PROJEÇÃO</div><div class="circle-chart-container"><div class="circle-chart"><svg viewBox="0 0 200 200"><circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/><circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/></svg><div class="percentage-text" style="color: ${projecaoHex}">${projecao.toFixed(1)}%</div></div></div></div>
+</div>
+
+<!-- SEGUNDA LINHA: 4 CARDS (VALOR ESPERADO + DIFERENÇA + QUARTIL + BAIXA ANTERIOR) -->
+<div class="operador-metrics-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="metric-card"><div class="metric-title">🎯 VALOR ESPERADO</div><div class="metric-value">${formatMoney(esperado)}</div><div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div></div>
+    <div class="metric-card"><div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div><div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}</div><div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div></div>
+    ${quartilCard}
+    <div class="metric-card" id="baixaAnteriorCard" style="background: linear-gradient(135deg, #0A2F44, #1A5D8F); color: white;">
+        <div class="metric-title" style="color: rgba(255,255,255,0.9);">📅 RECEBIDO BAIXA ANTERIOR</div>
+        <div class="metric-value" style="color: white; font-size: 1rem;">CARREGANDO...</div>
+        <div class="metric-sub" style="color: rgba(255,255,255,0.8); font-size: 0.7rem;">Aguardando dados...</div>
     </div>
-    <div class="operador-info-extra">
-        <div class="metric-title">📊 PROJEÇÃO DIÁRIA</div>
-        <div class="projecao-diaria">
-            <div class="diaria-item"><div class="diaria-label">Meta por dia</div><div class="diaria-value">${formatMoney(metaDiaria)}</div></div>
-            <div class="diaria-item"><div class="diaria-label">Amanhã você deverá ter</div><div class="diaria-value">${formatMoney(amanhaEsperado)}</div></div>
-        </div>
-        ${posicaoAtual > 0 && posicaoAtual <= 10 ? `<div style="margin-top: 15px; padding: 10px; background: #1E6DC3; border-radius: 20px; color: white;">🏆 Você está na ${posicaoAtual}ª posição do ranking geral!</div>` : posicaoAtual > 0 ? `<div style="margin-top: 15px; padding: 10px; background: #6C757D; border-radius: 20px; color: white;">📊 Você está na ${posicaoAtual}ª posição do ranking geral. Continue melhorando!</div>` : ''}
+</div>
+
+<div class="operador-info-extra">
+    <div class="metric-title">📊 PROJEÇÃO DIÁRIA</div>
+    <div class="projecao-diaria">
+        <div class="diaria-item"><div class="diaria-label">Meta por dia</div><div class="diaria-value">${formatMoney(metaDiaria)}</div></div>
+        <div class="diaria-item"><div class="diaria-label">Amanhã você deverá ter</div><div class="diaria-value">${formatMoney(amanhaEsperado)}</div></div>
     </div>
-    <div class="ranking-operador">
-        <h4>🏆 Ranking Geral - Top 10 Operadores</h4>
-        ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `<li style="${m.isCurrentUser ? 'background: #EFF6FF; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
-            <div class="ranking-position" style="${m.isCurrentUser ? 'background: #28A745;' : ''}">${idx + 1}</div>
-            <div class="ranking-name" style="${m.isCurrentUser ? 'font-weight: 800; color: #1E6DC3;' : ''}">${m.nome} ${m.isCurrentUser ? '(Você)' : ''}</div>
-        </li>`).join('')}</ul>` : '<p class="no-data-message">Nenhum operador cadastrado.</p>'}
-    </div>
+    ${posicaoAtual > 0 && posicaoAtual <= 10 ? `<div style="margin-top: 15px; padding: 10px; background: #1E6DC3; border-radius: 20px; color: white;">🏆 Você está na ${posicaoAtual}ª posição do ranking geral!</div>` : posicaoAtual > 0 ? `<div style="margin-top: 15px; padding: 10px; background: #6C757D; border-radius: 20px; color: white;">📊 Você está na ${posicaoAtual}ª posição do ranking geral. Continue melhorando!</div>` : ''}
+</div>
+<div class="ranking-operador">
+    <h4>🏆 Ranking Geral - Top 10 Operadores</h4>
+    ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `<li style="${m.isCurrentUser ? 'background: #EFF6FF; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
+        <div class="ranking-position" style="${m.isCurrentUser ? 'background: #28A745;' : ''}">${idx + 1}</div>
+        <div class="ranking-name" style="${m.isCurrentUser ? 'font-weight: 800; color: #1E6DC3;' : ''}">${m.nome} ${m.isCurrentUser ? '(Você)' : ''}</div>
+    </li>`).join('')}</ul>` : '<p class="no-data-message">Nenhum operador cadastrado.</p>'}
+</div>
 `;
     
     document.getElementById('operadorDashboardContent').innerHTML = operadorHtml;
@@ -3853,9 +3967,32 @@ window.limparFiltrosAnalitico = function() {
     document.getElementById('eliteDashboardContent').classList.add('hidden');
     document.getElementById('motivationalMessage').innerHTML = "💪 Continue assim! Cada dia é uma nova oportunidade de superar suas metas!";
     
+    // 🔥 CALCULAR RECEBIDO DA BAIXA ANTERIOR
+    calcularRecebidoBaixaAnterior(currentUser.id).then(baixaAnterior => {
+        const baixaAnteriorCard = document.getElementById('baixaAnteriorCard');
+        if (baixaAnteriorCard) {
+            baixaAnteriorCard.innerHTML = `
+                <div class="metric-title">📅 RECEBIDO BAIXA ANTERIOR</div>
+                <div class="metric-value" style="color: #17A2B8;">${formatMoney(baixaAnterior.valor)}</div>
+                <div class="metric-sub" style="font-size: 0.7rem;">${baixaAnterior.mensagem}</div>
+            `;
+        }
+    }).catch(error => {
+        console.error('Erro ao carregar baixa anterior:', error);
+        const baixaAnteriorCard = document.getElementById('baixaAnteriorCard');
+        if (baixaAnteriorCard) {
+            baixaAnteriorCard.innerHTML = `
+                <div class="metric-title">📅 RECEBIDO BAIXA ANTERIOR</div>
+                <div class="metric-value" style="color: #DC3545;">R$ 0,00</div>
+                <div class="metric-sub" style="font-size: 0.7rem;">Erro ao carregar dados</div>
+            `;
+        }
+    });
+    
     const btnAnalitico = document.getElementById('btnAnalitico');
     if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
 }
+
 
     function carregarEliteDashboard() {
     const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
@@ -3872,6 +4009,18 @@ window.limparFiltrosAnalitico = function() {
     const amanhaEsperado = esperado + metaDiaria;
     const circumference = 2 * Math.PI * 80;
     const dashArray = (projecao / 100) * circumference;
+    
+    // 🔥 CALCULAR RECEBIDO DA BAIXA ANTERIOR
+    calcularRecebidoBaixaAnterior(currentUser.id).then(baixaAnterior => {
+        const baixaAnteriorCard = document.getElementById('baixaAnteriorCard');
+        if (baixaAnteriorCard) {
+            baixaAnteriorCard.innerHTML = `
+                <div class="metric-title">📅 RECEBIDO BAIXA ANTERIOR</div>
+                <div class="metric-value" style="color: #17A2B8;">${formatMoney(baixaAnterior.valor)}</div>
+                <div class="metric-sub" style="font-size: 0.7rem;">${baixaAnterior.mensagem}</div>
+            `;
+        }
+    });
     
     const todosOperadores = usuarios.filter(u => (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
     const operadoresComRecebido = todosOperadores.map(m => {
@@ -3905,6 +4054,12 @@ window.limparFiltrosAnalitico = function() {
                 <div class="ranking-position" style="${m.isCurrentUser ? 'background: #28A745;' : ''}">${idx + 1}</div>
                 <div class="ranking-name" style="${m.isCurrentUser ? 'font-weight: 800; color: #1E6DC3;' : ''}">${m.nome} ${m.isCurrentUser ? '(Você)' : ''}</div>
             </li>`).join('')}</ul>` : '<p class="no-data-message">Nenhum operador cadastrado.</p>'}
+        </div>
+        <!-- NOVO CARD: RECEBIDO BAIXA ANTERIOR -->
+        <div class="metric-card" id="baixaAnteriorCard" style="background: linear-gradient(135deg, #0A2F44, #1A5D8F); color: white; margin-top: 20px;">
+            <div class="metric-title" style="color: rgba(255,255,255,0.9);">📅 CARREGANDO...</div>
+            <div class="metric-value" style="color: white;">--</div>
+            <div class="metric-sub" style="color: rgba(255,255,255,0.8);">Aguardando dados...</div>
         </div>
     `;
     
@@ -3967,13 +4122,12 @@ window.limparFiltrosAnalitico = function() {
     }
 
     function carregarVisaoSetor() {
-    console.log('🔄 Carregando Visão do Setor - Usuário:', currentUser?.nome, 'Cargo:', currentUser?.cargo);
+    //console.log('🔄 Carregando Visão do Setor - Usuário:', currentUser?.nome, 'Cargo:', currentUser?.cargo);
     
     const mes = new Date().getMonth() + 1;
     const ano = new Date().getFullYear();
     const metaSetor = getMetaSetor();
     
-    console.log('Meta do Setor:', formatMoney(metaSetor));
     
     let totalRecebidoSetor = 0;
     let dadosEquipes = [];
@@ -3988,7 +4142,6 @@ window.limparFiltrosAnalitico = function() {
         // Buscar TODOS os membros da equipe (operadores, elite, e também o supervisor se estiver na equipe)
         const membros = usuarios.filter(u => u.equipe_id === eq.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
         
-        console.log(`Equipe ${eq.nome}: ${membros.length} membros`);
         
         // Somar recebido dos membros
         for (let m of membros) {
@@ -3997,7 +4150,6 @@ window.limparFiltrosAnalitico = function() {
                 totalEquipe += metaUsuario.recebido;
                 totalRecebidoSetor += metaUsuario.recebido;
                 membrosCount++;
-                console.log(`  - ${m.nome}: ${formatMoney(metaUsuario.recebido)}`);
             }
         }
         
@@ -4009,7 +4161,6 @@ window.limparFiltrosAnalitico = function() {
                 totalEquipe += metaSup.recebido;
                 totalRecebidoSetor += metaSup.recebido;
                 membrosCount++;
-                console.log(`  - ${supervisorEquipe.nome} (Supervisor): ${formatMoney(metaSup.recebido)}`);
             }
         }
         
@@ -4023,7 +4174,6 @@ window.limparFiltrosAnalitico = function() {
     
     // Se não há dados, mostra mensagem
     if (dadosEquipes.length === 0 || totalRecebidoSetor === 0) {
-        console.log('⚠️ Nenhum dado encontrado!');
         document.getElementById('visaoSetorContent').innerHTML = `
             <div class="no-data-message" style="text-align: center; padding: 40px;">
                 <p>📭 Nenhum dado encontrado para o setor.</p>
@@ -4105,7 +4255,6 @@ window.limparFiltrosAnalitico = function() {
     `;
     
     document.getElementById('visaoSetorContent').innerHTML = html;
-    console.log('✅ Visão do Setor carregada! Total:', formatMoney(totalRecebidoSetor));
 }
 
 // ============================================
@@ -5492,7 +5641,6 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
         const motivationalDiv = document.getElementById('motivationalMessage');
         if (motivationalDiv && !document.getElementById('btnAnalitico')) {
             motivationalDiv.appendChild(btn);
-            console.log('✅ Botão Analítico criado para:', currentUser?.cargo);
         }
     } else {
         btn.style.display = 'inline-block';
@@ -5593,27 +5741,46 @@ if(currentUser.cargo === 'supervisor') {
     `;
     document.body.appendChild(div);
     
+    // 🔥 ADICIONE ESTA FUNÇÃO PARA CAPTURAR O ENTER
+    function setupEnterLogin() {
+        const loginInput = document.getElementById('loginUser');
+        const senhaInput = document.getElementById('loginSenha');
+        
+        const handleEnter = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.fazerLogin();
+            }
+        };
+        
+        if (loginInput) loginInput.addEventListener('keypress', handleEnter);
+        if (senhaInput) senhaInput.addEventListener('keypress', handleEnter);
+    }
+    
+    // Aguarda os elementos serem criados e adiciona os eventos
+    setTimeout(setupEnterLogin, 50);
+    
     window.fazerLogin = async () => {
-    await carregarDados(); 
-    let login = document.getElementById('loginUser').value; 
-    let senha = document.getElementById('loginSenha').value; 
-    
-    // Normaliza: converte login para minúsculo para comparação
-    let loginNormalizado = login.toLowerCase().trim();
-    
-    // Busca ignorando maiúsculo/minúsculo no login, mas senha permanece original
-    let user = usuarios.find(u => 
-        u.login?.toLowerCase().trim() === loginNormalizado && 
-        u.senha === senha
-    ); 
-    
-    if (user) { 
-        localStorage.setItem('currentUser', JSON.stringify(user)); 
-        location.reload(); 
-    } else { 
-        document.getElementById('loginError').innerText = '❌ Usuário ou senha inválidos'; 
-    } 
-};
+        await carregarDados(); 
+        let login = document.getElementById('loginUser').value; 
+        let senha = document.getElementById('loginSenha').value; 
+        
+        // Normaliza: converte login para minúsculo para comparação
+        let loginNormalizado = login.toLowerCase().trim();
+        
+        // Busca ignorando maiúsculo/minúsculo no login, mas senha permanece original
+        let user = usuarios.find(u => 
+            u.login?.toLowerCase().trim() === loginNormalizado && 
+            u.senha === senha
+        ); 
+        
+        if (user) { 
+            localStorage.setItem('currentUser', JSON.stringify(user)); 
+            location.reload(); 
+        } else { 
+            document.getElementById('loginError').innerText = '❌ Usuário ou senha inválidos'; 
+        } 
+    };
     
     window.toggleLoginPassword = () => { 
         const senhaInput = document.getElementById('loginSenha'); 
@@ -5779,7 +5946,6 @@ function atualizarDiasUteis() {
     
     const diasRestantes = Math.max(0, totalDias - diasPassados);
     
-    console.log('📅 Atualizando dias úteis - Total:', totalDias, 'Passados:', diasPassados, 'Restantes:', diasRestantes);
     
     // Tentar encontrar os elementos de várias formas
     let elPassados = document.getElementById('diasPassadosDisplay');
@@ -5798,7 +5964,6 @@ function atualizarDiasUteis() {
     
     // Se ainda não encontrou, recriar o card
     if (!elPassados) {
-        console.log('⚠️ Card de dias úteis não encontrado, recriando...');
         const motivationalDiv = document.getElementById('motivationalMessage');
         if (motivationalDiv && motivationalDiv.parentNode) {
             // Verificar se já existe um card de dias úteis
@@ -5818,7 +5983,6 @@ function atualizarDiasUteis() {
                 </div>
             `;
             motivationalDiv.parentNode.insertBefore(newCard, motivationalDiv.nextSibling);
-            console.log('✅ Card de dias úteis recriado!');
             return;
         }
     }
@@ -5828,7 +5992,6 @@ function atualizarDiasUteis() {
         elPassados.innerHTML = diasPassados;
         elRestantes.innerHTML = diasRestantes;
         elTotal.innerHTML = totalDias;
-        console.log('✅ Dias úteis atualizados com sucesso!');
     } else {
         console.log('❌ Não foi possível encontrar ou criar os elementos de dias úteis');
         // Última tentativa: aguardar e tentar novamente
