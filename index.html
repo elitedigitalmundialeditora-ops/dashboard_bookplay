@@ -1951,26 +1951,39 @@ function calcularQuartilOperador(operadorAtual, operadorRecebido, metaOperador) 
     if (!moneyString || moneyString === '') return 0;
     try {
         let str = String(moneyString).trim();
+        
+        // Se já for número, retorna direto (sem arredondamento)
         if (typeof moneyString === 'number') return moneyString;
         
         // Remove "R$" e espaços
         str = str.replace(/R\$/gi, '').trim();
         
-        // Detecta se tem centavos (formato brasileiro)
-        // Caso especial: "1.234,56" - remove pontos dos milhares e troca vírgula por ponto
+        // Caso especial: "1.234,56" (formato brasileiro)
         if (str.includes(',') && str.match(/\d+,\d{2}$/)) {
             // Remove pontos dos milhares
             str = str.replace(/\./g, '');
             // Troca vírgula decimal por ponto
             str = str.replace(/,/g, '.');
-        } else {
-            // Formato com ponto decimal
-            str = str.replace(/\./g, '');
+        } 
+        // Caso: "1,234.56" (formato americano)
+        else if (str.includes(',') && str.includes('.')) {
+            // Remove vírgulas (separador de milhar)
+            str = str.replace(/,/g, '');
+        }
+        // Caso: "1234.56" (formato simples)
+        else if (str.includes('.')) {
+            // Mantém o ponto como está (já é decimal)
+        }
+        // Caso: "1234,56" (vírgula como decimal)
+        else if (str.includes(',')) {
             str = str.replace(/,/g, '.');
         }
         
         const number = parseFloat(str);
+        
+        // 🔥 MANTER A PRECISÃO ORIGINAL (sem arredondar)
         return isNaN(number) ? 0 : number;
+        
     } catch (e) {
         console.error('Erro ao converter moeda:', moneyString, e);
         return 0;
@@ -3792,10 +3805,6 @@ window.limparFiltrosAnalitico = function() {
     showToast('🧹 Filtros limpos! Mostrando todos os registros.');
 };
 
-// ============================================
-// FUNÇÃO PARA CALCULAR RECEBIDO DA BAIXA ANTERIOR (CORRIGIDA)
-// ============================================
-
 async function calcularRecebidoBaixaAnterior(usuarioId) {
     try {
         const registros = await carregarRegistrosRecebimentos(usuarioId);
@@ -3805,66 +3814,96 @@ async function calcularRecebidoBaixaAnterior(usuarioId) {
         }
         
         const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        
-        let dataInicio, dataFim;
-        let diasConsiderados = [];
         const diaSemana = hoje.getDay();
         
+        let dataInicioStr, dataFimStr;
+        let diasConsiderados = [];
+        
+        const formatarData = (data) => {
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        };
+        
         if (diaSemana === 1) {
-            dataInicio = new Date(hoje);
-            dataInicio.setDate(hoje.getDate() - 3);
-            dataFim = new Date(hoje);
-            dataFim.setDate(hoje.getDate() - 1);
+            const sexta = new Date(hoje);
+            sexta.setDate(hoje.getDate() - 3);
+            const domingo = new Date(hoje);
+            domingo.setDate(hoje.getDate() - 1);
+            dataInicioStr = formatarData(sexta);
+            dataFimStr = formatarData(domingo);
             diasConsiderados = ['Sexta-feira', 'Sábado', 'Domingo'];
-        } else if (diaSemana === 0) {
-            dataInicio = new Date(hoje);
-            dataInicio.setDate(hoje.getDate() - 1);
-            dataFim = new Date(hoje);
-            dataFim.setDate(hoje.getDate() - 1);
-            diasConsiderados = ['Sábado'];
-        } else {
-            dataInicio = new Date(hoje);
-            dataInicio.setDate(hoje.getDate() - 1);
-            dataFim = new Date(hoje);
-            dataFim.setDate(hoje.getDate() - 1);
-            const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-            const diaAnterior = new Date(hoje);
-            diaAnterior.setDate(hoje.getDate() - 1);
-            diasConsiderados = [diasSemana[diaAnterior.getDay()]];
+        } 
+        else if (diaSemana === 2) {
+            const segunda = new Date(hoje);
+            segunda.setDate(hoje.getDate() - 1);
+            dataInicioStr = formatarData(segunda);
+            dataFimStr = formatarData(segunda);
+            diasConsiderados = ['Segunda-feira'];
         }
-        
-        dataInicio.setHours(0, 0, 0, 0);
-        dataFim.setHours(23, 59, 59, 999);
-        
+        else if (diaSemana === 3) {
+            const terca = new Date(hoje);
+            terca.setDate(hoje.getDate() - 1);
+            dataInicioStr = formatarData(terca);
+            dataFimStr = formatarData(terca);
+            diasConsiderados = ['Terça-feira'];
+        }
+        else if (diaSemana === 4) {
+            const quarta = new Date(hoje);
+            quarta.setDate(hoje.getDate() - 1);
+            dataInicioStr = formatarData(quarta);
+            dataFimStr = formatarData(quarta);
+            diasConsiderados = ['Quarta-feira'];
+        }
+        else if (diaSemana === 5) {
+            const quinta = new Date(hoje);
+            quinta.setDate(hoje.getDate() - 1);
+            dataInicioStr = formatarData(quinta);
+            dataFimStr = formatarData(quinta);
+            diasConsiderados = ['Quinta-feira'];
+        }
+        else if (diaSemana === 6) {
+            const sexta = new Date(hoje);
+            sexta.setDate(hoje.getDate() - 1);
+            dataInicioStr = formatarData(sexta);
+            dataFimStr = formatarData(sexta);
+            diasConsiderados = ['Sexta-feira'];
+        }
+        else if (diaSemana === 0) {
+            const sabado = new Date(hoje);
+            sabado.setDate(hoje.getDate() - 1);
+            dataInicioStr = formatarData(sabado);
+            dataFimStr = formatarData(sabado);
+            diasConsiderados = ['Sábado'];
+        }
         
         let totalRecebido = 0;
         let registrosEncontrados = [];
         
         for (const registro of registros) {
             if (registro.data_pagamento) {
-                const dataPagamento = new Date(registro.data_pagamento);
-                dataPagamento.setHours(0, 0, 0, 0);
+                const dataPgtoStr = registro.data_pagamento.split('T')[0];
                 
-                if (dataPagamento >= dataInicio && dataPagamento <= dataFim) {
+                if (dataPgtoStr >= dataInicioStr && dataPgtoStr <= dataFimStr) {
                     totalRecebido += registro.valor_recebido || 0;
                     registrosEncontrados.push(registro);
                 }
             }
         }
         
-        // Log do resultado (apenas uma linha)
-        //console.log(`💰 Baixa Anterior: ${formatMoney(totalRecebido)} (${registrosEncontrados.length} registros)`);
-        
         let mensagem = '';
         if (diasConsiderados.length === 1) {
-            mensagem = `Recebido no dia ${diasConsiderados[0]}`;
+            const dataObj = new Date(dataInicioStr);
+            mensagem = `${diasConsiderados[0]} (${dataObj.toLocaleDateString('pt-BR')})`;
         } else {
-            mensagem = `Recebido em ${diasConsiderados.join(', ')}`;
+            const dataInicioObj = new Date(dataInicioStr);
+            const dataFimObj = new Date(dataFimStr);
+            mensagem = `${diasConsiderados.join(', ')} (${dataInicioObj.toLocaleDateString('pt-BR')} a ${dataFimObj.toLocaleDateString('pt-BR')})`;
         }
         
         if (totalRecebido === 0) {
-            mensagem += `\nNenhum recebimento encontrado no período.`;
+            mensagem += `\nNenhum recebimento encontrado.`;
         } else {
             mensagem += `\n${registrosEncontrados.length} registro(s) encontrado(s).`;
         }
@@ -3872,9 +3911,7 @@ async function calcularRecebidoBaixaAnterior(usuarioId) {
         return {
             valor: totalRecebido,
             mensagem: mensagem,
-            dias: diasConsiderados,
-            registros: registrosEncontrados,
-            periodo: { inicio: dataInicio, fim: dataFim }
+            registros: registrosEncontrados
         };
         
     } catch (error) {
@@ -3974,7 +4011,6 @@ function carregarOperadorDashboard() {
             baixaAnteriorCard.innerHTML = `
                 <div class="metric-title">📅 RECEBIDO BAIXA ANTERIOR</div>
                 <div class="metric-value" style="color: #17A2B8;">${formatMoney(baixaAnterior.valor)}</div>
-                <div class="metric-sub" style="font-size: 0.7rem;">${baixaAnterior.mensagem}</div>
             `;
         }
     }).catch(error => {
