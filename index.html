@@ -1826,7 +1826,11 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         return "Boa noite"; 
     }
     
-    function calcularQuartilOperador(operadorAtual, operadorRecebido, metaOperador) {
+    // ============================================
+// FUNÇÃO DE QUARTIL PARA OPERADOR/ELITE
+// ============================================
+
+function calcularQuartilOperador(operadorAtual, operadorRecebido, metaOperador) {
     const mes = new Date().getMonth() + 1;
     const ano = new Date().getFullYear();
     
@@ -1867,7 +1871,6 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
     let mensagem = '';
     let icone = '';
     let corBg = '';
-    let valorNecessario = 0;
     let percentualMeta = 0;
     
     // Calcular percentual da meta
@@ -1875,66 +1878,62 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
         percentualMeta = (recebidoAtual / metaValor) * 100;
     }
     
-    // 🔥 CLASSIFICAÇÃO POR PROJEÇÃO COM MENSAGENS FORMATADAS
+    // CLASSIFICAÇÃO POR PROJEÇÃO
     if (projecaoAtual >= 100) {
-        quartilAtual = '🏆 1º Quartil - Excelente!';
+        quartilAtual = '1º Quartil - Excelente!';
         
         if (metaValor > 0 && recebidoAtual >= metaValor) {
-            mensagem = `🎉 PARABÉNS! Meta batida e projeção superior a 100%!`;
+            mensagem = `PARABÉNS! Meta batida e projeção superior a 100%!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else if (metaValor > 0) {
             const faltaMeta = metaValor - recebidoAtual;
-            mensagem = `🚀 Faltam ${formatMoney(faltaMeta)} para bater sua meta!<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Faltam ${formatMoney(faltaMeta)} para bater sua meta!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
-            mensagem = `🏆 Você está no Topo! Projeção superior a 100%!`;
+            mensagem = `Você está no Topo! Projeção superior a 100%!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         }
         icone = '🏆';
         corBg = '#28A745';
-        valorNecessario = 0;
     }
     else if (projecaoAtual >= 80) {
         quartilAtual = '2º Quartil';
         
-        // Calcular quanto falta de RECEBIDO para atingir 100% de projeção (1º Quartil)
         const esperadoAtual = (metaValor / getDiasUteis()) * diasPassados;
-        const recebidoNecessario100 = esperadoAtual; // Para 100% de projeção, recebido = esperado
-        valorNecessario = recebidoNecessario100 - recebidoAtual;
+        const recebidoNecessario100 = esperadoAtual;
+        const valorNecessario = Math.max(0, recebidoNecessario100 - recebidoAtual);
         
         if (valorNecessario > 0) {
-            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 1º Quartil<br><span style="font-size: 0.85rem; opacity: 1.0;"> ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 1º Quartil<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
-            mensagem = `🎯 Você já atingiu a meta para o 1º Quartil!<br><span style="font-size: 0.85rem; opacity: 1.0;"> ${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Você já atingiu a meta para o 1º Quartil!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         }
-        icone = '';
+        icone = '📈';
         corBg = '#1E6DC3';
     }
     else if (projecaoAtual >= 40) {
-        quartilAtual = '⚠️ 3º Quartil';
+        quartilAtual = '3º Quartil';
         
-        // Calcular quanto falta para chegar ao 2º Quartil (80% de projeção)
         const esperadoAtual = (metaValor / getDiasUteis()) * diasPassados;
         const recebidoNecessario80 = (80 * esperadoAtual) / 100;
-        valorNecessario = recebidoNecessario80 - recebidoAtual;
+        const valorNecessario = Math.max(0, recebidoNecessario80 - recebidoAtual);
         
         if (valorNecessario > 0) {
-            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 2º Quartil<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 2º Quartil<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
-            mensagem = `📊 Você já atingiu a meta para o 2º Quartil!<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Você já atingiu a meta para o 2º Quartil!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         }
         icone = '⚠️';
         corBg = '#FFC107';
     }
     else {
-        quartilAtual = '🔴 4º Quartil - Crítico';
+        quartilAtual = '4º Quartil - Crítico';
         
-        // Calcular quanto falta para chegar ao 3º Quartil (40% de projeção)
         const esperadoAtual = (metaValor / getDiasUteis()) * diasPassados;
         const recebidoNecessario40 = (40 * esperadoAtual) / 100;
-        valorNecessario = recebidoNecessario40 - recebidoAtual;
+        const valorNecessario = Math.max(0, recebidoNecessario40 - recebidoAtual);
         
         if (valorNecessario > 0) {
-            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 3º Quartil<br><span style="font-size: 0.85rem; opacity: 1.0;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 3º Quartil<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         } else {
-            mensagem = `⚠️ Você já atingiu a meta para o 3º Quartil!<br><span style="font-size: 0.85rem; opacity: 1.0> {percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+            mensagem = `Você já atingiu a meta para o 3º Quartil!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
         }
         icone = '⚡';
         corBg = '#DC3545';
@@ -1942,7 +1941,6 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
     
     return {
         quartilAtual,
-        metaProximoQuartil: valorNecessario,
         mensagem,
         icone,
         corBg
@@ -4110,69 +4108,343 @@ window.limparFiltrosAnalitico = function() {
     console.log('✅ Visão do Setor carregada! Total:', formatMoney(totalRecebidoSetor));
 }
 
+// ============================================
+// FUNÇÃO DE QUARTIL PARA SUPERVISOR
+// ============================================
+
+function calcularQuartilSupervisor(supervisorId, equipeId) {
+    const mes = new Date().getMonth() + 1;
+    const ano = new Date().getFullYear();
+    
+    // Buscar a equipe do supervisor
+    const equipe = equipes.find(e => e.id === equipeId);
+    if (!equipe) return null;
+    
+    // Buscar meta da equipe
+    const metaEquipeObj = metasEquipe.find(me => me?.equipe_id === equipeId && me?.mes === mes && me?.ano === ano);
+    const metaEquipe = metaEquipeObj?.meta || 0;
+    
+    // Buscar todos os membros da equipe (operadores + elite)
+    const membros = usuarios.filter(u => u.equipe_id === equipeId && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+    
+    // Somar recebido de todos os membros
+    let totalRecebidoEquipe = 0;
+    for (const membro of membros) {
+        const metaMembro = metas.find(m => m?.usuario_id === membro.id && m?.mes === mes && m?.ano === ano);
+        if (metaMembro) {
+            totalRecebidoEquipe += metaMembro.recebido || 0;
+        }
+    }
+    
+    // Somar também o recebido do próprio supervisor (se ele tiver)
+    const metaSupervisor = metas.find(m => m?.usuario_id === supervisorId && m?.mes === mes && m?.ano === ano);
+    if (metaSupervisor) {
+        totalRecebidoEquipe += metaSupervisor.recebido || 0;
+    }
+    
+    // Calcular projeção da equipe
+    const projecaoEquipe = calcularProjecao(metaEquipe, totalRecebidoEquipe);
+    const diasPassados = getDiasPassados();
+    const diasUteis = getDiasUteis();
+    const esperadoEquipe = (metaEquipe / diasUteis) * diasPassados;
+    
+    let quartilAtual = '';
+    let mensagem = '';
+    let icone = '';
+    let corBg = '';
+    let valorNecessario = 0;
+    let percentualMeta = (totalRecebidoEquipe / metaEquipe) * 100;
+    
+    // Classificação por quartil baseada na PROJEÇÃO da equipe
+    if (projecaoEquipe >= 100) {
+        quartilAtual = '1º Quartil - Excelente!';
+        
+        if (metaEquipe > 0 && totalRecebidoEquipe >= metaEquipe) {
+            mensagem = `PARABÉNS! Meta da equipe batida e projeção superior a 100%!`;
+        } else if (metaEquipe > 0) {
+            const faltaMeta = metaEquipe - totalRecebidoEquipe;
+            mensagem = `Faltam ${formatMoney(faltaMeta)} para bater a meta da equipe! • ${percentualMeta.toFixed(1)}% da meta alcançada.`;
+        } else {
+            mensagem = `Sua equipe está no Topo! Projeção superior a 100%!`;
+        }
+        icone = '🏆';
+        corBg = '#28A745';
+        valorNecessario = 0;
+    }
+    else if (projecaoEquipe >= 80) {
+        quartilAtual = '2º Quartil';
+        
+        const recebidoNecessario100 = esperadoEquipe;
+        valorNecessario = Math.max(0, recebidoNecessario100 - totalRecebidoEquipe);
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 1º Quartil • ${percentualMeta.toFixed(1)}% da meta alcançada.`;
+        } else {
+            mensagem = `Sua equipe já atingiu a meta para o 1º Quartil! • ${percentualMeta.toFixed(1)}% da meta alcançada.`;
+        }
+        icone = '📈';
+        corBg = '#1E6DC3';
+    }
+    else if (projecaoEquipe >= 40) {
+    quartilAtual = '3º Quartil';
+    
+    const recebidoNecessario80 = (80 * esperadoEquipe) / 100;
+    valorNecessario = Math.max(0, recebidoNecessario80 - totalRecebidoEquipe);
+    
+    if (valorNecessario > 0) {
+        mensagem = `Faltam ${formatMoney(valorNecessario)} para o 2º Quartil<br><span style="font-size: 0.95rem; opacity: 1;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+    } else {
+        mensagem = `Sua equipe já atingiu a meta para o 2º Quartil!<br><span style="font-size: 0.95rem; opacity: 1;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+    }
+    icone = '⚠️';
+    corBg = '#FFC107';
+}
+    else {
+        quartilAtual = '4º Quartil - Crítico';
+        
+        const recebidoNecessario40 = (40 * esperadoEquipe) / 100;
+        valorNecessario = Math.max(0, recebidoNecessario40 - totalRecebidoEquipe);
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 3º Quartil • ${percentualMeta.toFixed(1)}% da meta alcançada.`;
+        } else {
+            mensagem = `Sua equipe já atingiu a meta para o 3º Quartil! • ${percentualMeta.toFixed(1)}% da meta alcançada.`;
+        }
+        icone = '⚡';
+        corBg = '#DC3545';
+    }
+    
+    return {
+        quartilAtual,
+        mensagem,
+        icone,
+        corBg,
+        projecao: projecaoEquipe,
+        totalRecebido: totalRecebidoEquipe,
+        metaEquipe: metaEquipe
+    };
+}
+
+// ============================================
+// FUNÇÃO DE QUARTIL PARA GESTOR (SETOR)
+// ============================================
+
+function calcularQuartilGestor() {
+    const mes = new Date().getMonth() + 1;
+    const ano = new Date().getFullYear();
+    
+    // Buscar meta do setor
+    const metaSetor = getMetaSetor();
+    if (metaSetor === 0) return null;
+    
+    // Calcular total recebido do setor (soma de todos os usuários ativos)
+    let totalRecebidoSetor = 0;
+    const usuariosAtivos = usuarios.filter(u => u.status === 'ativo');
+    
+    for (const usuario of usuariosAtivos) {
+        const metaUsuario = metas.find(m => m?.usuario_id === usuario.id && m?.mes === mes && m?.ano === ano);
+        if (metaUsuario) {
+            totalRecebidoSetor += metaUsuario.recebido || 0;
+        }
+    }
+    
+    // Calcular projeção do setor
+    const projecaoSetor = calcularProjecao(metaSetor, totalRecebidoSetor);
+    const diasPassados = getDiasPassados();
+    const diasUteis = getDiasUteis();
+    const esperadoSetor = (metaSetor / diasUteis) * diasPassados;
+    
+    let quartilAtual = '';
+    let mensagem = '';
+    let icone = '';
+    let corBg = '';
+    let percentualMeta = (totalRecebidoSetor / metaSetor) * 100;
+    
+    // Classificação por quartil baseada na PROJEÇÃO do setor
+    if (projecaoSetor >= 100) {
+        quartilAtual = '1º Quartil - Excelente!';
+        
+        if (metaSetor > 0 && totalRecebidoSetor >= metaSetor) {
+            mensagem = `PARABÉNS! Meta do setor batida e projeção superior a 100%!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else if (metaSetor > 0) {
+            const faltaMeta = metaSetor - totalRecebidoSetor;
+            mensagem = `Faltam ${formatMoney(faltaMeta)} para bater a meta do setor!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `Setor está no Topo! Projeção superior a 100%!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        }
+        icone = '🏆';
+        corBg = '#28A745';
+    }
+    else if (projecaoSetor >= 80) {
+        quartilAtual = '2º Quartil';
+        
+        const recebidoNecessario100 = esperadoSetor;
+        const valorNecessario = Math.max(0, recebidoNecessario100 - totalRecebidoSetor);
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 1º Quartil<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `Setor já atingiu a meta para o 1º Quartil!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        }
+        icone = '📈';
+        corBg = '#1E6DC3';
+    }
+    else if (projecaoSetor >= 40) {
+        quartilAtual = '3º Quartil';
+        
+        const recebidoNecessario80 = (80 * esperadoSetor) / 100;
+        const valorNecessario = Math.max(0, recebidoNecessario80 - totalRecebidoSetor);
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 2º Quartil<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `Setor já atingiu a meta para o 2º Quartil!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        }
+        icone = '⚠️';
+        corBg = '#FFC107';
+    }
+    else {
+        quartilAtual = '4º Quartil - Crítico';
+        
+        const recebidoNecessario40 = (40 * esperadoSetor) / 100;
+        const valorNecessario = Math.max(0, recebidoNecessario40 - totalRecebidoSetor);
+        
+        if (valorNecessario > 0) {
+            mensagem = `Faltam ${formatMoney(valorNecessario)} para o 3º Quartil<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        } else {
+            mensagem = `Setor já atingiu a meta para o 3º Quartil!<br><span style="font-size: 0.85rem; opacity: 0.9;">${percentualMeta.toFixed(1)}% da meta alcançada.</span>`;
+        }
+        icone = '⚡';
+        corBg = '#DC3545';
+    }
+    
+    return {
+        quartilAtual,
+        mensagem,
+        icone,
+        corBg,
+        projecao: projecaoSetor,
+        totalRecebido: totalRecebidoSetor,
+        metaSetor: metaSetor
+    };
+}
+
     function carregarSupervisorDashboard() {
-        const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
-        const supervisorEquipe = equipes.find(e => e.id === currentUser.equipe_id);
-        if (!supervisorEquipe) {
-            document.getElementById('supervisorDashboardContent').innerHTML = `<div class="no-data-message"><p>⚠️ Você não está associado a nenhuma equipe.</p><p>Entre em contato com o gestor para ser vinculado a uma equipe.</p></div>`;
-            document.getElementById('supervisorDashboardContent').classList.remove('hidden');
-            document.getElementById('gestorDashboardContent').classList.add('hidden');
-            document.getElementById('operadorDashboardContent').classList.add('hidden');
-            document.getElementById('eliteDashboardContent').classList.add('hidden');
-            document.getElementById('motivationalMessage').innerHTML = "👋 Visão Geral da Equipe";
-            const btnAnalitico = document.getElementById('btnAnalitico');
-            return;
-        }
-        
-        let metaEquipeObj = metasEquipe.find(me => me?.equipe_id === supervisorEquipe.id && me?.mes === mes && me?.ano === ano);
-        let metaEquipe = metaEquipeObj?.meta || 100000;
-        let membros = usuarios.filter(u => u.equipe_id === supervisorEquipe.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
-        let totalRecebido = 0;
-        let dadosMembros = [];
-        
-        for(let m of membros) { 
-            let mo = metas.find(meta=> meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano); 
-            if(mo) {
-                totalRecebido += mo.recebido || 0;
-                const projecao = calcularProjecao(mo.meta, mo.recebido);
-                dadosMembros.push({ id: m.id, nome: m.nome, recebido: mo.recebido || 0, projecao: projecao, cor: getProjecaoColor(projecao) });
-            }
-        }
-        
-        const metaSupervisor = metas.find(m => m?.usuario_id === currentUser.id && m?.mes === mes && m?.ano === ano) || { recebido: 0 };
-        totalRecebido += metaSupervisor.recebido || 0;
-        
-        const projecaoEquipe = calcularProjecao(metaEquipe, totalRecebido);
-        const projecaoHex = getProjecaoColorHex(projecaoEquipe);
-        const esperadoEquipe = calcularEsperado(metaEquipe);
-        const diferenca = totalRecebido - esperadoEquipe;
-        const rankingMembros = [...dadosMembros].sort((a, b) => b.projecao - a.projecao).slice(0, 5);
-        const circumference = 2 * Math.PI * 80;
-        const dashArray = (projecaoEquipe / 100) * circumference;
-        
-        const supervisorHtml = `
-            <div class="supervisor-metrics-grid">
-                <div class="metric-card"><div class="metric-title">💰 TOTAL RECEBIDO</div><div class="metric-value">${formatMoney(totalRecebido)}</div><div class="metric-sub">Meta da Equipe: ${formatMoney(metaEquipe)}</div></div>
-                <div class="metric-card"><div class="metric-title">📈 PROJEÇÃO DA EQUIPE</div><div class="circle-chart-container"><div class="circle-chart"><svg viewBox="0 0 200 200"><circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/><circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/></svg><div class="percentage-text" style="color: ${projecaoHex}">${projecaoEquipe.toFixed(1)}%</div></div></div></div>
-                <div class="metric-card"><div class="metric-title">🎯 VALOR ESPERADO</div><div class="metric-value">${formatMoney(esperadoEquipe)}</div><div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div></div>
-                <div class="metric-card"><div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div><div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}</div><div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div></div>
-            </div>
-            <div class="ranking-supervisor"><h4>🏆 Top 5 - Melhor Projeção</h4>${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `<li><div class="ranking-position">${idx+1}</div><div class="ranking-name">${m.nome}</div><div class="ranking-value">${formatMoney(m.recebido)}</div><div class="ranking-proj ${m.cor}">${m.projecao.toFixed(1)}%</div></li>`).join('')}</ul>` : '<p class="no-data-message">Nenhum membro encontrado nesta equipe.</p>'}</div>`;
-        
-        document.getElementById('supervisorDashboardContent').innerHTML = supervisorHtml;
+    const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
+    const supervisorEquipe = equipes.find(e => e.id === currentUser.equipe_id);
+    
+    if (!supervisorEquipe) {
+        document.getElementById('supervisorDashboardContent').innerHTML = `<div class="no-data-message">
+            <p>⚠️ Você não está associado a nenhuma equipe.</p>
+            <p>Entre em contato com o gestor para ser vinculado a uma equipe.</p>
+        </div>`;
         document.getElementById('supervisorDashboardContent').classList.remove('hidden');
         document.getElementById('gestorDashboardContent').classList.add('hidden');
         document.getElementById('operadorDashboardContent').classList.add('hidden');
         document.getElementById('eliteDashboardContent').classList.add('hidden');
-        document.getElementById('motivationalMessage').innerHTML = "👋 Visão Geral da Equipe - " + supervisorEquipe.nome;
-        
-        const btnAnalitico = document.getElementById('btnAnalitico');
+        document.getElementById('motivationalMessage').innerHTML = "👋 Visão Geral da Equipe";
+        return;
     }
+    
+    // 🔥 CALCULAR QUARTIL DA EQUIPE
+    const quartilInfo = calcularQuartilSupervisor(currentUser.id, supervisorEquipe.id);
+    
+    let metaEquipeObj = metasEquipe.find(me => me?.equipe_id === supervisorEquipe.id && me?.mes === mes && me?.ano === ano);
+    let metaEquipe = metaEquipeObj?.meta || 100000;
+    let membros = usuarios.filter(u => u.equipe_id === supervisorEquipe.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+    let totalRecebido = 0;
+    let dadosMembros = [];
+    
+    for(let m of membros) { 
+        let mo = metas.find(meta=> meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano); 
+        if(mo) {
+            totalRecebido += mo.recebido || 0;
+            const projecao = calcularProjecao(mo.meta, mo.recebido);
+            dadosMembros.push({ id: m.id, nome: m.nome, recebido: mo.recebido || 0, projecao: projecao, cor: getProjecaoColor(projecao) });
+        }
+    }
+    
+    const metaSupervisor = metas.find(m => m?.usuario_id === currentUser.id && m?.mes === mes && m?.ano === ano) || { recebido: 0 };
+    totalRecebido += metaSupervisor.recebido || 0;
+    
+    const projecaoEquipe = calcularProjecao(metaEquipe, totalRecebido);
+    const projecaoHex = getProjecaoColorHex(projecaoEquipe);
+    const esperadoEquipe = calcularEsperado(metaEquipe);
+    const diferenca = totalRecebido - esperadoEquipe;
+    const rankingMembros = [...dadosMembros].sort((a, b) => b.projecao - a.projecao).slice(0, 5);
+    const circumference = 2 * Math.PI * 80;
+    const dashArray = (projecaoEquipe / 100) * circumference;
+    
+    // 🔥 CARD DO QUARTIL DA EQUIPE
+const quartilCard = quartilInfo ? `
+    <div class="metric-card" style="background: linear-gradient(135deg, #0A2F44, ${quartilInfo.corBg}); color: white;">
+        <div class="metric-title" style="color: rgba(255,255,255,0.9);">${quartilInfo.icone} ANÁLISE POR QUARTIL - EQUIPE</div>
+        <div class="metric-value" style="color: white; font-size: 1rem;">${quartilInfo.quartilAtual}</div>
+        <div class="metric-sub" style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 0.85rem;">${quartilInfo.mensagem}</div>
+    </div>
+` : '';
+
+    const supervisorHtml = `
+        <div class="supervisor-metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">💰 TOTAL RECEBIDO DA EQUIPE</div>
+                <div class="metric-value">${formatMoney(totalRecebido)}</div>
+                <div class="metric-sub">Meta da Equipe: ${formatMoney(metaEquipe)}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">📈 PROJEÇÃO DA EQUIPE</div>
+                <div class="circle-chart-container">
+                    <div class="circle-chart">
+                        <svg viewBox="0 0 200 200">
+                            <circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/>
+                            <circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/>
+                        </svg>
+                        <div class="percentage-text" style="color: ${projecaoHex}">${projecaoEquipe.toFixed(1)}%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🎯 VALOR ESPERADO DA EQUIPE</div>
+                <div class="metric-value">${formatMoney(esperadoEquipe)}</div>
+                <div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div>
+                <div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">
+                    ${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}
+                </div>
+                <div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div>
+            </div>
+            ${quartilCard}
+        </div>
+        <div class="ranking-supervisor">
+            <h4>🏆 Top 5 - Melhor Projeção da Equipe</h4>
+            ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `
+                <li>
+                    <div class="ranking-position">${idx+1}</div>
+                    <div class="ranking-name">${m.nome}</div>
+                    <div class="ranking-value">${formatMoney(m.recebido)}</div>
+                    <div class="ranking-proj ${m.cor}">${m.projecao.toFixed(1)}%</div>
+                </li>
+            `).join('')}</ul>` : '<p class="no-data-message">Nenhum membro encontrado nesta equipe.</p>'}
+        </div>
+    `;
+    
+    document.getElementById('supervisorDashboardContent').innerHTML = supervisorHtml;
+    document.getElementById('supervisorDashboardContent').classList.remove('hidden');
+    document.getElementById('gestorDashboardContent').classList.add('hidden');
+    document.getElementById('operadorDashboardContent').classList.add('hidden');
+    document.getElementById('eliteDashboardContent').classList.add('hidden');
+    document.getElementById('motivationalMessage').innerHTML = `👋 Visão Geral da Equipe - ${supervisorEquipe.nome}`;
+}
 
     function carregarDashboardGestor() {
     const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
     let totalRecebido = 0, equipesData = [];
     const metaSetor = getMetaSetor();
+    
+    // 🔥 CALCULAR QUARTIL DO SETOR
+    const quartilInfo = calcularQuartilGestor();
     
     // Soma do próprio gestor
     const metaGestor = metas.find(m => m?.usuario_id === currentUser.id && m?.mes === mes && m?.ano === ano);
@@ -4182,21 +4454,16 @@ window.limparFiltrosAnalitico = function() {
         let metaEquipe = metasEquipe.find(me => me?.equipe_id === eq.id && me?.mes === mes && me?.ano === ano);
         let metaValor = metaEquipe?.meta || 100000;
         
-        // MEMBROS: operadores + elite
         let membros = usuarios.filter(u => u.equipe_id === eq.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
-        
-        // 🔥 CORREÇÃO: Buscar o supervisor/gestor da equipe
         let supervisorEquipe = usuarios.find(u => u.equipe_id === eq.id && (u.cargo === 'supervisor' || u.cargo === 'gestor') && u.status === 'ativo');
         
         let recebidoEq = 0;
         
-        // Soma dos operadores e elite
         for(let m of membros) { 
             let mo = metas.find(meta=> meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano); 
             if(mo) recebidoEq += mo.recebido || 0; 
         }
         
-        // 🔥 CORREÇÃO: Somar também o recebido do supervisor/gestor da equipe (se não for o gestor logado)
         if(supervisorEquipe && supervisorEquipe.id !== currentUser.id) {
             let metaSupervisor = metas.find(meta => meta?.usuario_id === supervisorEquipe.id && meta?.mes === mes && meta?.ano === ano);
             if(metaSupervisor) recebidoEq += metaSupervisor.recebido || 0;
@@ -4208,6 +4475,15 @@ window.limparFiltrosAnalitico = function() {
         equipesData.push({ nome: eq.nome, recebido: recebidoEq, alcance, projecao });
     }
     
+    // 🔥 CARD DO QUARTIL DO SETOR
+    const quartilCard = quartilInfo ? `
+        <div class="metric-card" style="background: linear-gradient(135deg, #0A2F44, ${quartilInfo.corBg}); color: white; grid-column: span 2;">
+            <div class="metric-title" style="color: rgba(255,255,255,0.9);">${quartilInfo.icone} ANÁLISE POR QUARTIL - SETOR</div>
+            <div class="metric-value" style="color: white; font-size: 1rem;">${quartilInfo.quartilAtual}</div>
+            <div class="metric-sub" style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 0.85rem;">${quartilInfo.mensagem}</div>
+        </div>
+    ` : '';
+    
     document.getElementById('gestorDashboardContent').innerHTML = `
         <div class="cards-grid">
             <div class="card"><div class="card-title">💰 Total Recebido do Setor</div><div class="card-value">${formatMoney(totalRecebido)}</div></div>
@@ -4216,6 +4492,7 @@ window.limparFiltrosAnalitico = function() {
                 <div class="card-value" style="color:white;">${formatMoney(metaSetor)}</div>
                 <div class="metric-sub" style="color:#B0D4FF;">Meta configurada pelo Gestor</div>
             </div>
+            ${quartilCard}
         </div>
         <div class="stats-grid">
             <div class="stat-chart"><h4>Alcance da Meta por Equipe</h4>${equipesData.map(eq => `<div style="margin-bottom:20px;"><div style="display:flex; justify-content:space-between;"><strong>${eq.nome}</strong><span>${eq.alcance.toFixed(1)}%</span></div><div class="progress-bar-simple"><div class="progress-fill" style="width: ${Math.min(eq.alcance,100)}%; background: ${eq.alcance>=100?'#1E7B4B':'#1E6DC3'};">${formatMoney(eq.recebido)}</div></div></div>`).join('')}</div>
@@ -4262,13 +4539,7 @@ window.limparFiltrosAnalitico = function() {
             if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
         }
         
-        function carregarDashboard() {
-    if(!currentUser) return;
-    
-    // 🔥 ATUALIZAR DIAS ÚTEIS
-    atualizarDiasUteisDisplay();
-    
-    }
+        
         
         setTimeout(function() {
             const btn = document.getElementById('btnAnalitico');
