@@ -2352,7 +2352,6 @@ function formatarDataHoraBrasil(dataISO) {
         aplicarFiltroHistorico(); 
     }
 
-// Função para converter datas do Excel ou string para formato YYYY-MM-DD
 function converterDataExcel(valor) {
     if (!valor || valor === '') return null;
     
@@ -2361,6 +2360,7 @@ function converterDataExcel(valor) {
         // Excel data: 25569 = 1970-01-01 (ajuste para Unix timestamp)
         const data = new Date((valor - 25569) * 86400000);
         if (!isNaN(data.getTime()) && data.getFullYear() > 2000 && data.getFullYear() < 2100) {
+            // Retorna no formato YYYY-MM-DD
             return data.toISOString().split('T')[0];
         }
         return null;
@@ -2371,7 +2371,7 @@ function converterDataExcel(valor) {
         // Tentar formato ISO (aaaa-mm-dd) - PRIORIDADE
         let dataIso = new Date(valor);
         if (!isNaN(dataIso.getTime()) && dataIso.getFullYear() > 2000 && dataIso.getFullYear() < 2100) {
-            // 🔥 CORREÇÃO: Não retornar data futura, apenas a data normalizada
+            // Retorna no formato YYYY-MM-DD
             return dataIso.toISOString().split('T')[0];
         }
         
@@ -3458,7 +3458,7 @@ document.getElementById('btnExportarExcel')?.addEventListener('click', () => {
     function gerarLinhasAnaliticoAgrupado(registros, isOperador) {
     if (!registros || registros.length === 0) {
         const colspan = isOperador ? 10 : 9;
-        return `<tr><td colspan="${colspan}" style="text-align: center; padding: 40px;">📭 Nenhum dado encontrado para o período selecionado.</td></tr>`;
+        return `<tr><td colspan="${colspan}" style="text-align: center; padding: 40px;">📭 Nenhum dado encontrado para o período selecionado. </td></tr>`;
     }
     
     const usuarioMap = new Map();
@@ -3467,11 +3467,32 @@ document.getElementById('btnExportarExcel')?.addEventListener('click', () => {
     return registros.map(reg => {
         const tipoComissao = (reg.tipo_comissao === 'Direto' || reg.tipo_comissao === 'Integral') ? 'Direto' : (reg.tipo_comissao === 'Extra' ? 'Extra' : (reg.direto > 0 ? 'Direto' : 'Extra'));
         const tipoClass = tipoComissao === 'Direto' ? 'proj-azul' : 'proj-amarelo';
-        let dataPgto = '-';
+        
+        // 🔥 CORREÇÃO: Exibir a data corretamente sem conversão de timezone
+        let dataPgtoExibicao = '-';
+        let dataOriginal = '';
+        
         if (reg.data_pagamento) {
-            const data = new Date(reg.data_pagamento);
-            if (!isNaN(data.getTime())) dataPgto = data.toLocaleDateString('pt-BR');
+            dataOriginal = reg.data_pagamento;
+            // Como a data no banco está em formato YYYY-MM-DD, apenas invertemos para DD/MM/YYYY
+            if (typeof dataOriginal === 'string') {
+                // Remove qualquer parte de hora se existir
+                let dataStr = dataOriginal.split('T')[0];
+                const partes = dataStr.split('-');
+                if (partes.length === 3) {
+                    // Converte YYYY-MM-DD para DD/MM/YYYY
+                    dataPgtoExibicao = `${partes[2]}/${partes[1]}/${partes[0]}`;
+                } else {
+                    dataPgtoExibicao = dataStr;
+                }
+            } else if (dataOriginal instanceof Date) {
+                const ano = dataOriginal.getUTCFullYear();
+                const mes = String(dataOriginal.getUTCMonth() + 1).padStart(2, '0');
+                const dia = String(dataOriginal.getUTCDate()).padStart(2, '0');
+                dataPgtoExibicao = `${dia}/${mes}/${ano}`;
+            }
         }
+        
         const valorRecebido = reg.valor_recebido || 0;
         const comissao = reg.direto > 0 ? reg.direto : (reg.extra > 0 ? reg.extra : valorRecebido);
         const quantidade = reg.quantidade || 1;
@@ -3482,15 +3503,15 @@ document.getElementById('btnExportarExcel')?.addEventListener('click', () => {
         const getCargoLabel = () => cargo === 'gestor' ? 'Gestor' : (cargo === 'supervisor' ? 'Supervisor' : (cargo === 'elite' ? 'Elite' : 'Operador'));
         const nrDocumento = reg.nr_documento || reg.NrDocumento || reg.titulo || '-';
         
-        // Código do checklist
-        const itemKey = `${nrDocumento}|${dataPgto}|${valorRecebido}`;
-        const isChecked = isOperador ? getChecklistStatus(nrDocumento, dataPgto, valorRecebido) : false;
+        // Usar a data original para o checklist
+        const dataParaChecklist = dataOriginal.split('T')[0];
+        const itemKey = `${nrDocumento}|${dataParaChecklist}|${valorRecebido}`;
+        const isChecked = isOperador ? getChecklistStatus(nrDocumento, dataParaChecklist, valorRecebido) : false;
         const checkedAttr = isChecked ? 'checked' : '';
         
-        // Montar a linha da tabela - número de colunas deve bater com o cabeçalho
         return `
             <tr style="border-bottom: 1px solid #EDF2F7;">
-                ${isOperador ? `<td style="padding: 12px; text-align: center;"><input type="checkbox" class="checklist-item" data-key="${itemKey}" ${checkedAttr} onchange="setChecklistStatus('${nrDocumento.replace(/'/g, "\\'")}', '${dataPgto}', ${valorRecebido}, this.checked)"></td>` : ''}
+                ${isOperador ? `<td style="padding: 12px; text-align: center;"><input type="checkbox" class="checklist-item" data-key="${itemKey}" ${checkedAttr} onchange="setChecklistStatus('${nrDocumento.replace(/'/g, "\\'")}', '${dataParaChecklist}', ${valorRecebido}, this.checked)">` : ''}
                 <td style="padding: 12px;">
                     <strong>${getCargoIcon()} ${escapeHtml(nomeUsuario)}</strong>
                     <br><span style="font-size: 0.65rem; color: #5F7F9E;">${getCargoLabel()}</span>
@@ -3500,10 +3521,10 @@ document.getElementById('btnExportarExcel')?.addEventListener('click', () => {
                 <td style="padding: 12px;">${escapeHtml(reg.parcela || '-')}</td>
                 <td style="padding: 12px; text-align: center;">${quantidade}</td>
                 <td style="padding: 12px;"><span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; background: ${tipoClass === 'proj-azul' ? '#1E6DC3' : '#FFC107'}; color: ${tipoClass === 'proj-azul' ? 'white' : '#000'};">${tipoComissao}</span></td>
-                <td style="padding: 12px;">${dataPgto}</td>
+                <td style="padding: 12px;">${dataPgtoExibicao}</td>
                 <td style="padding: 12px; text-align: right;"><strong>${formatMoney(valorRecebido)}</strong></td>
                 <td style="padding: 12px; text-align: right;">${formatMoney(comissao)}</td>
-             </tr>
+              </tr>
         `;
     }).join('');
 }
@@ -3513,6 +3534,8 @@ window.filtrarAnaliticoAgrupado = function() {
     let registrosFiltrados = window.analiticoRegistros || [];
     const isOperador = window.analiticoIsOperador;
     
+    console.log('📊 Total de registros antes do filtro:', registrosFiltrados.length);
+    
     // ========== FILTRO POR CONFERIDOS ==========
     const btnFiltrar = document.getElementById('btnFiltrarConferidos');
     const filtrarConferidos = btnFiltrar ? btnFiltrar.classList.contains('active') : false;
@@ -3520,11 +3543,10 @@ window.filtrarAnaliticoAgrupado = function() {
     if (filtrarConferidos && isOperador) {
         registrosFiltrados = registrosFiltrados.filter(reg => {
             const nrDoc = reg.nr_documento || '';
-            const dataPgto = reg.data_pagamento ? new Date(reg.data_pagamento).toLocaleDateString('pt-BR') : '';
+            const dataPgto = reg.data_pagamento || '';
             return getChecklistStatus(nrDoc, dataPgto, reg.valor_recebido);
         });
     }
-    // ===========================================
     
     if (!isOperador) {
         const inputBusca = document.getElementById('analiticoBuscaUsuario');
@@ -3536,7 +3558,7 @@ window.filtrarAnaliticoAgrupado = function() {
         }
     }
     
-    // 🔥 NOVO FILTRO ÚNICO - Busca por Cliente OU Documento
+    // 🔥 BUSCA GERAL (Cliente ou Documento)
     const buscaGeral = document.getElementById('analiticoBuscaGeral')?.value.toLowerCase() || '';
     if (buscaGeral) {
         registrosFiltrados = registrosFiltrados.filter(reg => {
@@ -3546,32 +3568,54 @@ window.filtrarAnaliticoAgrupado = function() {
         });
     }
     
+    // 🔥 CORREÇÃO SIMPLIFICADA: As datas já estão em YYYY-MM-DD no banco!
     const dataInicio = document.getElementById('analiticoDataInicio')?.value;
-const dataFim = document.getElementById('analiticoDataFim')?.value;
+    const dataFim = document.getElementById('analiticoDataFim')?.value;
+    
+    console.log('📅 Data Início do filtro:', dataInicio);
+    console.log('📅 Data Fim do filtro:', dataFim);
+    
+    // 🔥 SIMPLES: Extrai apenas a data sem conversão de timezone
+    function getDateOnly(dateValue) {
+        if (!dateValue) return null;
+        if (typeof dateValue === 'string') {
+            // Se já está no formato YYYY-MM-DD (como está no banco)
+            if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return dateValue;
+            }
+            // Se for ISO com T, pega só a parte da data
+            if (dateValue.includes('T')) {
+                return dateValue.split('T')[0];
+            }
+        }
+        return null;
+    }
+    
+    if (dataInicio) {
+        const antes = registrosFiltrados.length;
+        registrosFiltrados = registrosFiltrados.filter(reg => {
+            if (!reg.data_pagamento) return false;
+            const dataRegistro = getDateOnly(reg.data_pagamento);
+            if (!dataRegistro) return false;
+            const resultado = dataRegistro >= dataInicio;
+            if (resultado && dataRegistro === dataInicio) {
+                console.log(`✅ Mantido: ${dataRegistro} (cliente: ${reg.cliente}, valor: ${reg.valor_recebido})`);
+            }
+            return resultado;
+        });
+        console.log(`📊 Filtro data início (>= ${dataInicio}): ${antes} → ${registrosFiltrados.length}`);
+    }
 
-if (dataInicio) {
-    // Criar data no formato local (YYYY-MM-DD) sem timezone
-    const [ano, mes, dia] = dataInicio.split('-');
-    const inicio = new Date(ano, mes - 1, dia, 0, 0, 0);
-    registrosFiltrados = registrosFiltrados.filter(reg => {
-        if (!reg.data_pagamento) return false;
-        const dataPgto = new Date(reg.data_pagamento);
-        // Comparar apenas ano, mês e dia (ignorar hora)
-        const dataPgtoStr = `${dataPgto.getFullYear()}-${String(dataPgto.getMonth() + 1).padStart(2, '0')}-${String(dataPgto.getDate()).padStart(2, '0')}`;
-        return dataPgtoStr >= dataInicio;
-    });
-}
-
-if (dataFim) {
-    const [ano, mes, dia] = dataFim.split('-');
-    const fim = new Date(ano, mes - 1, dia, 23, 59, 59);
-    registrosFiltrados = registrosFiltrados.filter(reg => {
-        if (!reg.data_pagamento) return false;
-        const dataPgto = new Date(reg.data_pagamento);
-        const dataPgtoStr = `${dataPgto.getFullYear()}-${String(dataPgto.getMonth() + 1).padStart(2, '0')}-${String(dataPgto.getDate()).padStart(2, '0')}`;
-        return dataPgtoStr <= dataFim;
-    });
-}
+    if (dataFim) {
+        const antes = registrosFiltrados.length;
+        registrosFiltrados = registrosFiltrados.filter(reg => {
+            if (!reg.data_pagamento) return false;
+            const dataRegistro = getDateOnly(reg.data_pagamento);
+            if (!dataRegistro) return false;
+            return dataRegistro <= dataFim;
+        });
+        console.log(`📊 Filtro data fim (<= ${dataFim}): ${antes} → ${registrosFiltrados.length}`);
+    }
     
     const tipo = document.getElementById('analiticoTipo')?.value || 'todos';
     if (tipo !== 'todos') {
@@ -3603,6 +3647,10 @@ if (dataFim) {
     if (totalRegistrosEl) totalRegistrosEl.innerHTML = registrosFiltrados.length;
     if (totalDiretoEl) totalDiretoEl.innerHTML = formatMoney(totalDireto);
     if (totalExtraEl) totalExtraEl.innerHTML = formatMoney(totalExtra);
+    
+    if (dataInicio || dataFim) {
+        showToast(`📅 Filtro aplicado: ${registrosFiltrados.length} registros encontrados`);
+    }
 };
 
 window.limparFiltrosAnaliticoAgrupado = function() {
@@ -3610,17 +3658,28 @@ window.limparFiltrosAnaliticoAgrupado = function() {
     const registros = window.analiticoRegistros || [];
     if (registros.length === 0) return;
     
-    let datas = registros.filter(r => r.data_pagamento).map(r => new Date(r.data_pagamento));
+    let datas = registros.filter(r => r.data_pagamento).map(r => {
+        const d = new Date(r.data_pagamento);
+        return !isNaN(d.getTime()) ? d : null;
+    }).filter(d => d !== null);
+    
     let dataMin = datas.length > 0 ? new Date(Math.min(...datas)) : new Date();
     let dataMax = datas.length > 0 ? new Date(Math.max(...datas)) : new Date();
-    const formatarDataInput = (data) => data.toISOString().split('T')[0];
     
-    // 🔥 LIMPAR CAMPO DE BUSCA ÚNICO
+    const formatarDataInput = (data) => {
+        const ano = data.getFullYear();
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    };
+    
+    // Limpar campo de busca única
     const buscaGeralInput = document.getElementById('analiticoBuscaGeral');
     if (buscaGeralInput) buscaGeralInput.value = '';
     
     const tipoSelect = document.getElementById('analiticoTipo');
     if (tipoSelect) tipoSelect.value = 'todos';
+    
     const dataInicio = document.getElementById('analiticoDataInicio');
     const dataFim = document.getElementById('analiticoDataFim');
     if (dataInicio) dataInicio.value = formatarDataInput(dataMin);
@@ -3631,6 +3690,14 @@ window.limparFiltrosAnaliticoAgrupado = function() {
         const selectedDiv = document.getElementById('analiticoUsuarioSelecionado');
         if (inputBusca) { inputBusca.value = ''; if (selectedDiv) selectedDiv.innerHTML = ''; }
         window.analiticoSelectedUserId = null;
+    }
+    
+    // Resetar o botão de conferidos também
+    const btnFiltrar = document.getElementById('btnFiltrarConferidos');
+    if (btnFiltrar) {
+        btnFiltrar.classList.remove('active');
+        btnFiltrar.style.background = '#17A2B8';
+        btnFiltrar.innerHTML = '☑️ Conferidos';
     }
     
     filtrarAnaliticoAgrupado();
