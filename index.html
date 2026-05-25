@@ -2124,7 +2124,6 @@ function calcularQuartilOperador(operadorAtual, operadorRecebido, metaOperador) 
     // Salva como string no formato ISO mas com horário local
     const dataHoraLocal = `${ano}-${mes}-${dia}T${hora}:${minuto}:${segundo}.000`;
     
-    console.log('📝 Salvando histórico - Horário do computador:', `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`);
     
     const novoLog = { 
         usuario_id: currentUser.id, 
@@ -2222,11 +2221,8 @@ function calcularQuartilOperador(operadorAtual, operadorRecebido, metaOperador) 
         });
         if (res.ok) {
             historico = await res.json();
-            console.log('📜 Histórico carregado:', historico.length, 'registros');
             // Log para verificar a primeira data
             if (historico.length > 0) {
-                console.log('📅 Primeira data do histórico:', historico[0].data_hora);
-                console.log('📅 Formatada:', formatarDataHoraBrasil(historico[0].data_hora));
             }
         }
         renderizarHistoricoPagina(); // CHAMAR DIRETAMENTE, sem aplicar filtros
@@ -2653,7 +2649,6 @@ async function processarImportacaoComFeedback(jsonData) {
             await new Promise(r => setTimeout(r, 5));
         }
         
-        console.log(`✅ ${totalSalvos} de ${todosRegistros.length} registros salvos!`);
         
         // ATUALIZAR METAS rapidamente
         atualizarLoadingMensagem('📊 Atualizando totais dos operadores...');
@@ -2749,7 +2744,6 @@ async function processarImportacaoComFeedback(jsonData) {
             classeOrigem: card.getAttribute('data-classe')
         };
         
-        console.log('Drag iniciado:', draggedOperador);
         e.dataTransfer.setData('text/plain', JSON.stringify(draggedOperador));
         card.classList.add('dragging');
         startAutoScroll();
@@ -2792,7 +2786,6 @@ async function processarImportacaoComFeedback(jsonData) {
                 .replace(/Ativo|Inativo|Desligado/g, '')
                 .trim();
             
-            console.log('Buscando operador (limpo):', nomeLimpo);
             
             const usuario = usuarios.find(u => {
                 if (!u || !u.nome) return false;
@@ -2804,7 +2797,6 @@ async function processarImportacaoComFeedback(jsonData) {
                 return false;
             });
             
-            console.log('Usuário encontrado:', usuario);
             
             if (!usuario) {
                 showToast(`❌ Operador "${nomeLimpo}" não encontrado!`);
@@ -2873,8 +2865,6 @@ async function processarImportacaoComFeedback(jsonData) {
             operadorData = draggedOperador;
         }
         
-        console.log('Drop - Dados do operador:', operadorData);
-        console.log('Classe destino:', classeDestino);
         
         if (!operadorData || !operadorData.nome) {
             showToast('❌ Erro ao identificar o operador!');
@@ -3534,7 +3524,6 @@ window.filtrarAnaliticoAgrupado = function() {
     let registrosFiltrados = window.analiticoRegistros || [];
     const isOperador = window.analiticoIsOperador;
     
-    console.log('📊 Total de registros antes do filtro:', registrosFiltrados.length);
     
     // ========== FILTRO POR CONFERIDOS ==========
     const btnFiltrar = document.getElementById('btnFiltrarConferidos');
@@ -3572,8 +3561,6 @@ window.filtrarAnaliticoAgrupado = function() {
     const dataInicio = document.getElementById('analiticoDataInicio')?.value;
     const dataFim = document.getElementById('analiticoDataFim')?.value;
     
-    console.log('📅 Data Início do filtro:', dataInicio);
-    console.log('📅 Data Fim do filtro:', dataFim);
     
     // 🔥 SIMPLES: Extrai apenas a data sem conversão de timezone
     function getDateOnly(dateValue) {
@@ -4859,24 +4846,20 @@ const quartilCard = quartilInfo ? `
     const mes = new Date().getMonth() + 1;
     const ano = new Date().getFullYear();
     
-    console.log('Salvando equipe:', { id, novoNome, novaMeta, supervisorId, mes, ano });
     
     // 1. Atualizar nome da equipe se mudou
     if (novoNome && novoNome !== nomeAntigo) {
         await updateIn('equipes', id, { nome: novoNome });
-        console.log('✅ Nome da equipe atualizado');
     }
     
     // 2. Atualizar supervisor (remover do antigo e adicionar novo)
     const supervisorAntigo = usuarios.find(u => u.equipe_id === Number(id) && (u.cargo === 'supervisor' || u.cargo === 'gestor'));
     if (supervisorAntigo && supervisorAntigo.id !== Number(supervisorId)) {
         await updateIn('usuarios', supervisorAntigo.id, { equipe_id: null });
-        console.log('✅ Supervisor antigo removido');
     }
     
     if (supervisorId) {
         await updateIn('usuarios', supervisorId, { equipe_id: id });
-        console.log('✅ Novo supervisor adicionado');
     }
     
     // 3. Atualizar ou criar meta da equipe (CORREÇÃO AQUI!)
@@ -4886,11 +4869,9 @@ const quartilCard = quartilInfo ? `
     if (metaExistente) {
         // Se existe, faz UPDATE
         await updateIn('metas_equipe', metaExistente.id, { meta: novaMeta });
-        console.log('✅ Meta da equipe ATUALIZADA (UPDATE):', novaMeta);
     } else {
         // Se não existe, faz INSERT
         await insertInto('metas_equipe', { equipe_id: Number(id), meta: novaMeta, mes: mes, ano: ano });
-        console.log('✅ Nova meta da equipe CRIADA (INSERT):', novaMeta);
     }
     
     await registrarHistorico('edicao', `Equipe "${nomeAntigo}" editada${novoNome !== nomeAntigo ? ` para "${novoNome}"` : ''}`);
@@ -4978,7 +4959,6 @@ window.abrirModalEdicaoRapida = (usuarioId, nome, classeAtual, equipeAtual) => {
     const user = usuarios.find(u => u.id == usuarioId);
     const equipeIdAtual = user?.equipe_id || '';
     
-    console.log('Abrindo edição para usuário:', { usuarioId, nome, equipeIdAtual, equipeAtual });
     
     // Recarregar equipes para garantir que estão atualizadas
     const equipesAtualizadas = [...equipes];
@@ -5028,17 +5008,6 @@ window.salvarEdicaoRapida = async (usuarioId, nomeAntigo) => {
         const mes = new Date().getMonth() + 1;
         const ano = new Date().getFullYear();
         
-        console.log('Salvando edição:', { 
-            usuarioId, 
-            novoNome, 
-            novoLogin, 
-            novaEquipeId, 
-            novaClasse, 
-            novaFuncao, 
-            novaMeta, 
-            mes, 
-            ano 
-        });
         
         let data = { 
             nome: novoNome, 
@@ -5051,7 +5020,6 @@ window.salvarEdicaoRapida = async (usuarioId, nomeAntigo) => {
         if (novaSenha && novaSenha.trim() !== '') data.senha = novaSenha;
         
         await updateIn('usuarios', usuarioId, data);
-        console.log('✅ Usuário atualizado');
         
         let metaExistente = metas.find(m => m?.usuario_id === Number(usuarioId) && m?.mes === mes && m?.ano === ano);
         
@@ -5059,7 +5027,6 @@ window.salvarEdicaoRapida = async (usuarioId, nomeAntigo) => {
             if (metaExistente) {
                 // SEM Math.round - valor exato
                 await updateIn('metas', metaExistente.id, { meta: novaMeta });
-                console.log('✅ Meta atualizada (UPDATE):', novaMeta);
             } else {
                 // SEM Math.round - valor exato
                 const result = await insertInto('metas', { 
@@ -5071,10 +5038,8 @@ window.salvarEdicaoRapida = async (usuarioId, nomeAntigo) => {
                     extra: 0, 
                     recebido: 0 
                 });
-                console.log('✅ Nova meta criada (INSERT):', result);
             }
         } else {
-            console.log('⚠️ Meta não informada ou inválida:', novaMeta);
         }
         
         await registrarHistorico('edicao', `Usuário "${nomeAntigo}" editado`);
