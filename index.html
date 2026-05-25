@@ -5946,6 +5946,56 @@ function mostrarModalPrimeiroAcesso() {
         return;
     }
     
+    // 🔥 CORREÇÃO: Verificar se a classe "Geral" existe, se não, criar ou usar primeira classe disponível
+    let classeParaUsar = 'Geral';
+    const classeGeralExiste = classes.find(c => c.nome === 'Geral');
+    
+    if (!classeGeralExiste) {
+        // Se não existe a classe "Geral", tenta criar
+        try {
+            const createRes = await fetch(`${SUPABASE_URL}/rest/v1/classes`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nome: 'Geral' })
+            });
+            
+            if (createRes.ok) {
+                console.log('✅ Classe "Geral" criada com sucesso');
+                // Recarregar classes
+                const classesRes = await fetch(`${SUPABASE_URL}/rest/v1/classes?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                if (classesRes.ok) {
+                    classes = await classesRes.json();
+                }
+            } else {
+                // Se não conseguiu criar, usa a primeira classe existente
+                if (classes.length > 0) {
+                    classeParaUsar = classes[0].nome;
+                    console.log(`⚠️ Classe "Geral" não disponível, usando "${classeParaUsar}" como padrão`);
+                } else {
+                    document.getElementById('primeiroError').innerHTML = '❌ Nenhuma classe disponível. Contate o administrador.';
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao criar classe Geral:', e);
+            if (classes.length > 0) {
+                classeParaUsar = classes[0].nome;
+            } else {
+                document.getElementById('primeiroError').innerHTML = '❌ Erro ao configurar classe. Contate o administrador.';
+                return;
+            }
+        }
+    }
+    
     // Salva o login em minúsculo para padronização
     login = loginNormalizado;
     
@@ -5955,16 +6005,16 @@ function mostrarModalPrimeiroAcesso() {
         login: login,
         senha: senha,
         cargo: 'operador',
-        classe: 'Geral',
+        classe: classeParaUsar,
         status: 'ativo',
         equipe_id: null
     });
     
-    if (result && result[0]) {
+    if (result && result.success) {
         const mes = new Date().getMonth() + 1;
         const ano = new Date().getFullYear();
         await insertInto('metas', {
-            usuario_id: result[0].id,
+            usuario_id: null, // Será atualizado após buscar o ID
             mes: mes,
             ano: ano,
             meta: 0,
@@ -5978,6 +6028,8 @@ function mostrarModalPrimeiroAcesso() {
         await carregarDados();
         const novoUser = usuarios.find(u => u.login === login);
         if (novoUser) {
+            // Atualizar a meta com o ID correto
+            await updateIn('metas', novoUser.id, { usuario_id: novoUser.id });
             localStorage.setItem('currentUser', JSON.stringify(novoUser));
             location.reload();
         } else {
