@@ -1549,7 +1549,7 @@
             border: 1px solid #E2E8F0;
             background: white;
         }
-        <style>
+        
     * {
         margin: 0;
         padding: 0;
@@ -5620,7 +5620,7 @@ window.salvarEdicaoRapida = async (usuarioId, nomeAntigo) => {
             @keyframes spin {
                 to { transform: rotate(360deg); }
             }
-        </style>
+        
     `;
     document.body.insertAdjacentHTML('beforeend', loadingHtml);
 }
@@ -6276,17 +6276,33 @@ let dailyTotalInterval = null;
 let isDraggingCard = false;
 let dragStartX = 0, dragStartY = 0;
 let cardStartLeft = 0, cardStartTop = 0;
+let tentativaCriacao = 0;
+const MAX_TENTATIVAS = 10;
 
 function criarQuadranteFlutuante() {
     // Verificar se já existe
     if (document.getElementById('floatingDailyCard')) return;
     
+    // Verificar se currentUser está disponível
+    if (!currentUser || !currentUser.cargo) {
+        tentativaCriacao++;
+        if (tentativaCriacao < MAX_TENTATIVAS) {
+            console.log(`⏳ Aguardando currentUser... tentativa ${tentativaCriacao}/${MAX_TENTATIVAS}`);
+            setTimeout(criarQuadranteFlutuante, 500);
+        }
+        return;
+    }
+    
+    // Resetar tentativas
+    tentativaCriacao = 0;
+    
     // Determinar o título baseado no cargo
     let titulo = '';
+    
     if (currentUser.cargo === 'gestor') {
-        titulo = '🏢 RECEBIDO DO SETOR';
+        titulo = '🏢 RECEBIDO DO SETOR (HOJE)';
     } else if (currentUser.cargo === 'supervisor') {
-        titulo = '👥 RECEBIDO DA EQUIPE';
+        titulo = '👥 RECEBIDO DA EQUIPE (HOJE)';
     } else {
         titulo = '📅 SEU RECEBIDO HOJE';
     }
@@ -6318,13 +6334,26 @@ function criarQuadranteFlutuante() {
     // Restaurar posição salva (específica do usuário)
     const savedLeft = localStorage.getItem(`floatingCardLeft_${currentUser.id}`);
     const savedTop = localStorage.getItem(`floatingCardTop_${currentUser.id}`);
-    if (savedLeft && savedTop && savedLeft !== 'null' && savedTop !== 'null') {
-        card.style.position = 'fixed';
-        card.style.left = savedLeft + 'px';
-        card.style.top = savedTop + 'px';
-        card.style.right = 'auto';
-        card.style.transform = 'none';
+    
+    if (savedLeft !== null && savedTop !== null) {
+        const leftNum = parseFloat(savedLeft);
+        const topNum = parseFloat(savedTop);
+        
+        if (!isNaN(leftNum) && !isNaN(topNum)) {
+            card.style.position = 'fixed';
+            card.style.left = leftNum + 'px';
+            card.style.top = topNum + 'px';
+            card.style.right = 'auto';
+            card.style.transform = 'none';
+            console.log(`✅ Quadrante posicionado: left=${leftNum}, top=${topNum}`);
+        } else {
+            // Posição padrão
+            card.style.right = '20px';
+            card.style.top = '50%';
+            card.style.transform = 'translateY(-50%)';
+        }
     } else {
+        // Posição padrão
         card.style.right = '20px';
         card.style.top = '50%';
         card.style.transform = 'translateY(-50%)';
@@ -6335,15 +6364,20 @@ function criarQuadranteFlutuante() {
     
     // Configurar eventos
     setupCardEvents();
+    
+    // Atualizar o valor imediatamente
+    setTimeout(() => atualizarQuadranteFlutuante(), 200);
+    
+    console.log(`✅ Quadrante flutuante criado para ${currentUser.cargo}: ${titulo}`);
 }
 
 function setupCardEvents() {
     const card = document.getElementById('floatingDailyCard');
+    if (!card) return;
+    
     const dragHandle = document.getElementById('floatingDragHandle');
     const minimizeBtn = document.getElementById('minimizeBtn');
     const body = document.getElementById('floatingDailyBody');
-    
-    if (!card) return;
     
     // Evento de minimizar
     if (minimizeBtn) {
@@ -6355,7 +6389,7 @@ function setupCardEvents() {
         });
     }
     
-    // 🔥 EVENTO DE CLICK APENAS NO CORPO (NÃO NO CABEÇALHO)
+    // EVENTO DE CLICK APENAS NO CORPO (NÃO NO CABEÇALHO)
     if (body) {
         body.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -6364,7 +6398,7 @@ function setupCardEvents() {
         });
     }
     
-    // 🔥 EVENTOS DE DRAG APENAS NO CABEÇALHO
+    // EVENTOS DE DRAG APENAS NO CABEÇALHO
     if (dragHandle) {
         dragHandle.addEventListener('mousedown', startDrag);
     }
@@ -6418,8 +6452,15 @@ function setupCardEvents() {
         if (!isDraggingCard) return;
         isDraggingCard = false;
         
-        localStorage.setItem(`floatingCardLeft_${currentUser.id}`, card.style.left);
-localStorage.setItem(`floatingCardTop_${currentUser.id}`, card.style.top);
+        // Salvar apenas o valor numérico (sem 'px')
+        const leftValue = parseFloat(card.style.left);
+        const topValue = parseFloat(card.style.top);
+        
+        if (!isNaN(leftValue) && !isNaN(topValue)) {
+            localStorage.setItem(`floatingCardLeft_${currentUser.id}`, leftValue);
+            localStorage.setItem(`floatingCardTop_${currentUser.id}`, topValue);
+            console.log(`✅ Posição salva: left=${leftValue}, top=${topValue}`);
+        }
         
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
@@ -6448,7 +6489,7 @@ async function buscarTotalDiaAtual() {
         let totalHoje = 0;
         
         if (currentUser.cargo === 'gestor') {
-            // 🔥 GESTOR: Buscar TODOS os registros do dia atual
+            // GESTOR: Buscar TODOS os registros do dia atual
             const url = `${SUPABASE_URL}/rest/v1/recebimentos?select=valor_recebido&data_pagamento=eq.${dataHoje}`;
             const res = await fetch(url, {
                 headers: {
@@ -6462,13 +6503,13 @@ async function buscarTotalDiaAtual() {
                 for (const reg of registros) {
                     totalHoje += reg.valor_recebido || 0;
                 }
-                console.log(`✅ GESTOR - Total do dia: R$ ${totalHoje.toFixed(2)} (${registros.length} registros)`);
+                console.log(`✅ GESTOR - Total do setor hoje: R$ ${totalHoje.toFixed(2)} (${registros.length} registros)`);
             } else {
                 console.error('❌ Gestor - Erro na requisição:', res.status);
             }
         } 
         else if (currentUser.cargo === 'supervisor') {
-            // 🔥 SUPERVISOR: Buscar registros APENAS da equipe
+            // SUPERVISOR: Buscar registros APENAS da equipe
             const equipeDoUsuario = equipes.find(e => e.id === currentUser.equipe_id);
             
             if (!equipeDoUsuario) {
@@ -6488,7 +6529,7 @@ async function buscarTotalDiaAtual() {
                 return 0;
             }
             
-            // Buscar registros de cada membro individualmente (mais confiável)
+            // Buscar registros de cada membro individualmente
             for (const membro of membrosDaEquipe) {
                 const url = `${SUPABASE_URL}/rest/v1/recebimentos?select=valor_recebido&usuario_id=eq.${membro.id}&data_pagamento=eq.${dataHoje}`;
                 const res = await fetch(url, {
@@ -6500,20 +6541,15 @@ async function buscarTotalDiaAtual() {
                 
                 if (res.ok) {
                     const registros = await res.json();
-                    let somaMembro = 0;
                     for (const reg of registros) {
-                        somaMembro += reg.valor_recebido || 0;
-                    }
-                    if (somaMembro > 0) {
-                        totalHoje += somaMembro;
-                        console.log(`  └─ ${membro.nome}: R$ ${somaMembro.toFixed(2)}`);
+                        totalHoje += reg.valor_recebido || 0;
                     }
                 }
             }
-            console.log(`✅ SUPERVISOR (${equipeDoUsuario.nome}) - Total do dia: R$ ${totalHoje.toFixed(2)}`);
+            console.log(`✅ SUPERVISOR (${equipeDoUsuario.nome}) - Total da equipe hoje: R$ ${totalHoje.toFixed(2)}`);
         } 
         else {
-            // 🔥 OPERADOR / ELITE: Buscar apenas seus próprios registros
+            // OPERADOR / ELITE: Buscar apenas seus próprios registros
             const url = `${SUPABASE_URL}/rest/v1/recebimentos?select=valor_recebido&usuario_id=eq.${currentUser.id}&data_pagamento=eq.${dataHoje}`;
             const res = await fetch(url, {
                 headers: {
@@ -6527,8 +6563,7 @@ async function buscarTotalDiaAtual() {
                 for (const reg of registros) {
                     totalHoje += reg.valor_recebido || 0;
                 }
-                const cargoLabel = currentUser.cargo === 'elite' ? 'ELITE' : 'OPERADOR';
-                console.log(`✅ ${cargoLabel} (${currentUser.nome}) - Total do dia: R$ ${totalHoje.toFixed(2)} (${registros.length} registros)`);
+                console.log(`✅ ${currentUser.cargo.toUpperCase()} (${currentUser.nome}) - Total hoje: R$ ${totalHoje.toFixed(2)} (${registros.length} registros)`);
             }
         }
         
@@ -6543,16 +6578,25 @@ async function buscarTotalDiaAtual() {
 async function atualizarQuadranteFlutuante() {
     const card = document.getElementById('floatingDailyCard');
     const valueElement = document.getElementById('dailyValue');
-    const titleElement = card?.querySelector('.daily-title');
     
-    if (!card || !valueElement) return;
+    if (!card || !valueElement) {
+        // Tenta criar novamente se não existir
+        criarQuadranteFlutuante();
+        return;
+    }
+    
+    if (!currentUser || !currentUser.cargo) {
+        console.log('⚠️ currentUser não disponível para atualizar quadrante');
+        return;
+    }
     
     // Atualizar título dinamicamente (caso o usuário troque de perfil)
+    const titleElement = card.querySelector('.daily-title');
     if (titleElement) {
         if (currentUser.cargo === 'gestor') {
-            titleElement.innerHTML = '🏢 RECEBIDO DO SETOR';
+            titleElement.innerHTML = '🏢 RECEBIDO DO SETOR (HOJE)';
         } else if (currentUser.cargo === 'supervisor') {
-            titleElement.innerHTML = '👥 RECEBIDO DA EQUIPE';
+            titleElement.innerHTML = '👥 RECEBIDO DA EQUIPE (HOJE)';
         } else {
             titleElement.innerHTML = '📅 SEU RECEBIDO HOJE';
         }
@@ -6577,17 +6621,15 @@ async function atualizarQuadranteFlutuante() {
 }
 
 function iniciarAtualizacaoQuadrante() {
-    // Atualizar apenas uma vez ao carregar a página
-    setTimeout(() => atualizarQuadranteFlutuante(), 500);
-    
-    // 🔥 REMOVIDO o setInterval - NÃO atualiza automaticamente mais!
-    // O quadrante só será atualizado quando:
-    // 1. A página for recarregada
-    // 2. Quando uma importação de dados for concluída (via atualizarDadosImediatos)
+    // Aguardar um pouco antes de tentar criar
+    setTimeout(() => {
+        criarQuadranteFlutuante();
+        // Atualizar o valor após criar
+        setTimeout(() => atualizarQuadranteFlutuante(), 500);
+    }, 500);
 }
 
 function pararAtualizacaoQuadrante() {
-    // Mantido para compatibilidade, mas não há mais intervalo para limpar
     if (dailyTotalInterval) {
         clearInterval(dailyTotalInterval);
         dailyTotalInterval = null;
@@ -6616,8 +6658,6 @@ async function abrirAnaliticoComFiltroHoje() {
             inputDataInicio.value = dataHoje;
             inputDataFim.value = dataHoje;
             btnBuscar.click();
-            
-            // Mostrar toast de confirmação
             showToast(`📅 Filtrando registros de ${dia}/${mes}/${ano}`);
         }
     }, 500);
