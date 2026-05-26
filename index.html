@@ -11,6 +11,130 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABBSURBVFhH7dMxDoAgDEDRL4J34N7dO3gHvICJpEBjKF1oY3zJSwf4y1+HdE6YtxiWmv2bhsGxYpggJogJYoKYICaICWKCmCAm/mgPc+UfaW5GqzEAAAAASUVORK5CYII=">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
+    
+/* Quadrante flutuante - Total do Dia */
+.floating-daily-card {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #1E6DC3, #0F3B6F);
+    border-radius: 20px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 1000;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: box-shadow 0.3s ease;
+    cursor: default;
+}
+
+.floating-daily-card:hover {
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+}
+
+/* Cabeçalho arrastável (todo ele) */
+.floating-daily-header {
+    background: rgba(0,0,0,0.2);
+    padding: 10px 15px;
+    border-radius: 20px 20px 0 0;
+    cursor: grab;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+.floating-daily-header:active {
+    cursor: grabbing;
+}
+
+.floating-daily-header .daily-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* Corpo do card */
+.floating-daily-body {
+    padding: 15px 20px 20px;
+    text-align: center;
+}
+
+.floating-daily-card .daily-date {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    background: rgba(255,255,255,0.2);
+    padding: 4px 8px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.floating-daily-card .daily-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 10px 0;
+}
+
+.floating-daily-card .daily-sub {
+    font-size: 0.65rem;
+    opacity: 0.8;
+    margin-top: 8px;
+}
+
+.floating-daily-card.loading {
+    opacity: 0.7;
+}
+
+.floating-daily-card.loading .daily-value {
+    font-size: 1.2rem;
+}
+
+/* Botão minimizar */
+.btn-minimize {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.btn-minimize:hover {
+    background: rgba(255,255,255,0.4);
+}
+
+/* Estado minimizado */
+.floating-daily-card.minimized .floating-daily-body {
+    display: none;
+}
+
+.floating-daily-card.minimized {
+    min-width: auto;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .floating-daily-card {
+        position: static;
+        transform: none;
+        margin: 10px 0;
+        width: 100%;
+    }
+    
+    .floating-daily-header {
+        cursor: default;
+    }
+}
+    
         * {
             margin: 0;
             padding: 0;
@@ -1731,9 +1855,10 @@ window.mudarPaginaAnaliticoGlobal = function(pagina) {
     }
     
     function logout() { 
-        localStorage.removeItem('currentUser'); 
-        location.reload(); 
-    }
+    pararAtualizacaoQuadrante();
+    localStorage.removeItem('currentUser'); 
+    location.reload(); 
+}
     
     function escapeHtml(text) {
     if (!text) return '-';
@@ -4079,9 +4204,10 @@ function carregarOperadorDashboard() {
         }
     });
     
-    const btnAnalitico = document.getElementById('btnAnalitico');
+        const btnAnalitico = document.getElementById('btnAnalitico');
     if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
 }
+
 
 
     function carregarEliteDashboard() {
@@ -4738,6 +4864,7 @@ const quartilCard = quartilInfo ? `
             <div class="stat-chart"><h4>🏆 Projeção por Equipe (Ranking)</h4>${[...equipesData].sort((a,b) => b.projecao - a.projecao).map((eq, idx) => `<div style="margin-bottom:20px;"><div style="display:flex; justify-content:space-between;"><strong>${idx+1}º - ${eq.nome}</strong><span>${eq.projecao.toFixed(1)}%</span></div><div class="progress-bar-simple"><div class="progress-fill" style="width: ${Math.min(eq.projecao,100)}%; background: ${eq.projecao>=100?'#1E7B4B':eq.projecao>=80?'#1E6DC3':'#F5A623'};">${eq.projecao.toFixed(1)}%</div></div></div>`).join('')}</div>
         </div>`;
     document.getElementById('motivationalMessage').innerHTML = "📊 Visão Geral do Setor";
+
 }
 
     function carregarDashboard() {
@@ -4746,48 +4873,50 @@ const quartilCard = quartilInfo ? `
     document.getElementById('diasRestantesDisplay').innerHTML = getDiasRestantes();
     document.getElementById('totalDiasDisplay').innerHTML = getDiasUteis();
         
-        const btnAnalitico = document.getElementById('btnAnalitico');
-        
-        if(currentUser.cargo === 'gestor') {
-            document.getElementById('supervisorDashboardContent').classList.add('hidden');
-            document.getElementById('operadorDashboardContent').classList.add('hidden');
-            document.getElementById('eliteDashboardContent').classList.add('hidden');
-            document.getElementById('gestorDashboardContent').classList.remove('hidden');
-            carregarDashboardGestor();
-            if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
-        } else if(currentUser.cargo === 'supervisor') {
-            document.getElementById('gestorDashboardContent').classList.add('hidden');
-            document.getElementById('operadorDashboardContent').classList.add('hidden');
-            document.getElementById('eliteDashboardContent').classList.add('hidden');
-            document.getElementById('supervisorDashboardContent').classList.remove('hidden');
-            carregarSupervisorDashboard();
-            if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
-        } else if(currentUser.cargo === 'operador') {
-            document.getElementById('gestorDashboardContent').classList.add('hidden');
-            document.getElementById('supervisorDashboardContent').classList.add('hidden');
-            document.getElementById('eliteDashboardContent').classList.add('hidden');
-            document.getElementById('operadorDashboardContent').classList.remove('hidden');
-            carregarOperadorDashboard();
-            if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
-        } else if(currentUser.cargo === 'elite') {
-            document.getElementById('gestorDashboardContent').classList.add('hidden');
-            document.getElementById('supervisorDashboardContent').classList.add('hidden');
-            document.getElementById('operadorDashboardContent').classList.add('hidden');
-            document.getElementById('eliteDashboardContent').classList.remove('hidden');
-            carregarEliteDashboard();
-            if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
-        }
-        
-        
-        
-        setTimeout(function() {
-            const btn = document.getElementById('btnAnalitico');
-            if (btn) {
-                btn.style.display = 'inline-block';
-                btn.style.visibility = 'visible';
-            }
-        }, 100);
+    const btnAnalitico = document.getElementById('btnAnalitico');
+    
+    // 🔥 Criar quadrante para todos os perfis
+    criarQuadranteFlutuante();
+    iniciarAtualizacaoQuadrante();
+    
+    if(currentUser.cargo === 'gestor') {
+        document.getElementById('supervisorDashboardContent').classList.add('hidden');
+        document.getElementById('operadorDashboardContent').classList.add('hidden');
+        document.getElementById('eliteDashboardContent').classList.add('hidden');
+        document.getElementById('gestorDashboardContent').classList.remove('hidden');
+        carregarDashboardGestor();
+        if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
+    } else if(currentUser.cargo === 'supervisor') {
+        document.getElementById('gestorDashboardContent').classList.add('hidden');
+        document.getElementById('operadorDashboardContent').classList.add('hidden');
+        document.getElementById('eliteDashboardContent').classList.add('hidden');
+        document.getElementById('supervisorDashboardContent').classList.remove('hidden');
+        carregarSupervisorDashboard();
+        if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
+    } else if(currentUser.cargo === 'operador') {
+        document.getElementById('gestorDashboardContent').classList.add('hidden');
+        document.getElementById('supervisorDashboardContent').classList.add('hidden');
+        document.getElementById('eliteDashboardContent').classList.add('hidden');
+        document.getElementById('operadorDashboardContent').classList.remove('hidden');
+        carregarOperadorDashboard();
+        if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
+    } else if(currentUser.cargo === 'elite') {
+        document.getElementById('gestorDashboardContent').classList.add('hidden');
+        document.getElementById('supervisorDashboardContent').classList.add('hidden');
+        document.getElementById('operadorDashboardContent').classList.add('hidden');
+        document.getElementById('eliteDashboardContent').classList.remove('hidden');
+        carregarEliteDashboard();
+        if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
     }
+    
+    setTimeout(function() {
+        const btn = document.getElementById('btnAnalitico');
+        if (btn) {
+            btn.style.display = 'inline-block';
+            btn.style.visibility = 'visible';
+        }
+    }, 100);
+}
 
     // ============================================
     // FUNÇÕES ADMIN E CRUD
@@ -5616,27 +5745,24 @@ function mostrarSucessoImportacao(mensagem, detalhes = '') {
         }
     };
     
-    // ============================================
-    // FUNÇÃO ATUALIZAR DADOS IMEDIATOS
-    // ============================================
-    
     async function atualizarDadosImediatos() { 
-        await carregarDados(); 
-        carregarDashboard(); 
-        if(currentUser?.cargo === 'gestor') { 
-            carregarEquipesTabGestor(); 
-            carregarAdminReformuladoGestor(); 
-            carregarSupervisoresGestor();
-            carregarOperadoresTabGestor();
-            carregarHistorico();
-        } else if(currentUser?.cargo === 'supervisor') {
+    await carregarDados(); 
+    carregarDashboard(); 
+    atualizarQuadranteFlutuante(); // 🔥 ADICIONE ESTA LINHA
+    
+    if(currentUser?.cargo === 'gestor') { 
+        carregarEquipesTabGestor(); 
+        carregarAdminReformuladoGestor(); 
+        carregarSupervisoresGestor();
+        carregarOperadoresTabGestor();
+        carregarHistorico();
+    } else if(currentUser?.cargo === 'supervisor') {
     carregarSupervisorDashboard(); 
     carregarEquipesTabGestor(); 
     carregarAdminReformuladoGestor(); 
     carregarSupervisoresGestor(); 
     carregarOperadoresTabGestor(); 
     carregarHistorico();
-    // 🔥 ADICIONE ESTAS LINHAS
     carregarVisaoSetor();
 } else if(currentUser?.cargo === 'elite') {
             carregarEliteDashboard();
@@ -6140,6 +6266,362 @@ const intervalDiasUteis = setInterval(function() {
         atualizarDiasUteis();
     }
 }, 500);
+
+// ============================================
+// QUADRANTE FLUTUANTE - TOTAL DO DIA (ARRÁSTAVEL)
+// ============================================
+
+let floatingCard = null;
+let dailyTotalInterval = null;
+let isDraggingCard = false;
+let dragStartX = 0, dragStartY = 0;
+let cardStartLeft = 0, cardStartTop = 0;
+
+function criarQuadranteFlutuante() {
+    // Verificar se já existe
+    if (document.getElementById('floatingDailyCard')) return;
+    
+    // Determinar o título baseado no cargo
+    let titulo = '';
+    if (currentUser.cargo === 'gestor') {
+        titulo = '🏢 RECEBIDO DO SETOR';
+    } else if (currentUser.cargo === 'supervisor') {
+        titulo = '👥 RECEBIDO DA EQUIPE';
+    } else {
+        titulo = '📅 SEU RECEBIDO HOJE';
+    }
+    
+    // Criar o elemento do quadrante
+    const card = document.createElement('div');
+    card.id = 'floatingDailyCard';
+    card.className = 'floating-daily-card loading';
+    card.innerHTML = `
+        <div class="floating-daily-header" id="floatingDragHandle">
+            <span class="daily-title">${titulo}</span>
+            <button class="btn-minimize" id="minimizeBtn">−</button>
+        </div>
+        <div class="floating-daily-body" id="floatingDailyBody">
+            <div class="daily-date" id="dailyDate">--/--/----</div>
+            <div class="daily-value" id="dailyValue">CARREGANDO...</div>
+            <div class="daily-sub">Clique para ver detalhes</div>
+        </div>
+    `;
+    
+    // Restaurar estado minimizado
+    const wasMinimized = localStorage.getItem(`floatingCardMinimized_${currentUser.id}`) === 'true';
+    if (wasMinimized) {
+        card.classList.add('minimized');
+        const minimizeBtn = card.querySelector('#minimizeBtn');
+        if (minimizeBtn) minimizeBtn.textContent = '+';
+    }
+    
+    // Restaurar posição salva (específica do usuário)
+    const savedLeft = localStorage.getItem(`floatingCardLeft_${currentUser.id}`);
+    const savedTop = localStorage.getItem(`floatingCardTop_${currentUser.id}`);
+    if (savedLeft && savedTop && savedLeft !== 'null' && savedTop !== 'null') {
+        card.style.position = 'fixed';
+        card.style.left = savedLeft + 'px';
+        card.style.top = savedTop + 'px';
+        card.style.right = 'auto';
+        card.style.transform = 'none';
+    } else {
+        card.style.right = '20px';
+        card.style.top = '50%';
+        card.style.transform = 'translateY(-50%)';
+    }
+    
+    document.body.appendChild(card);
+    floatingCard = card;
+    
+    // Configurar eventos
+    setupCardEvents();
+}
+
+function setupCardEvents() {
+    const card = document.getElementById('floatingDailyCard');
+    const dragHandle = document.getElementById('floatingDragHandle');
+    const minimizeBtn = document.getElementById('minimizeBtn');
+    const body = document.getElementById('floatingDailyBody');
+    
+    if (!card) return;
+    
+    // Evento de minimizar
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            card.classList.toggle('minimized');
+            minimizeBtn.textContent = card.classList.contains('minimized') ? '+' : '−';
+            localStorage.setItem(`floatingCardMinimized_${currentUser.id}`, card.classList.contains('minimized'));
+        });
+    }
+    
+    // 🔥 EVENTO DE CLICK APENAS NO CORPO (NÃO NO CABEÇALHO)
+    if (body) {
+        body.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('Clique no corpo do card - abrindo analítico');
+            abrirAnaliticoComFiltroHoje();
+        });
+    }
+    
+    // 🔥 EVENTOS DE DRAG APENAS NO CABEÇALHO
+    if (dragHandle) {
+        dragHandle.addEventListener('mousedown', startDrag);
+    }
+    
+    function startDrag(e) {
+        // Não arrastar se clicou no botão minimizar
+        if (e.target.closest('.btn-minimize')) return;
+        
+        e.preventDefault();
+        isDraggingCard = true;
+        
+        const rect = card.getBoundingClientRect();
+        cardStartLeft = rect.left;
+        cardStartTop = rect.top;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        
+        card.style.position = 'fixed';
+        card.style.left = cardStartLeft + 'px';
+        card.style.top = cardStartTop + 'px';
+        card.style.right = 'auto';
+        card.style.transform = 'none';
+        
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'grabbing';
+        
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+    }
+    
+    function onDrag(e) {
+        if (!isDraggingCard) return;
+        
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        
+        let newLeft = cardStartLeft + dx;
+        let newTop = cardStartTop + dy;
+        
+        // Limitar dentro da janela
+        const cardWidth = card.offsetWidth;
+        const cardHeight = card.offsetHeight;
+        newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - cardWidth - 10));
+        newTop = Math.max(10, Math.min(newTop, window.innerHeight - cardHeight - 10));
+        
+        card.style.left = newLeft + 'px';
+        card.style.top = newTop + 'px';
+    }
+    
+    function stopDrag() {
+        if (!isDraggingCard) return;
+        isDraggingCard = false;
+        
+        localStorage.setItem(`floatingCardLeft_${currentUser.id}`, card.style.left);
+localStorage.setItem(`floatingCardTop_${currentUser.id}`, card.style.top);
+        
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+    }
+}
+
+async function buscarTotalDiaAtual() {
+    if (!currentUser) return 0;
+    
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const dataHoje = `${ano}-${mes}-${dia}`;
+    
+    // Atualizar a data no card
+    const dateElement = document.getElementById('dailyDate');
+    if (dateElement) {
+        dateElement.innerHTML = `${dia}/${mes}/${ano}`;
+    }
+    
+    try {
+        let totalHoje = 0;
+        
+        if (currentUser.cargo === 'gestor') {
+            // 🔥 GESTOR: Buscar TODOS os registros do dia atual
+            const url = `${SUPABASE_URL}/rest/v1/recebimentos?select=valor_recebido&data_pagamento=eq.${dataHoje}`;
+            const res = await fetch(url, {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            
+            if (res.ok) {
+                const registros = await res.json();
+                for (const reg of registros) {
+                    totalHoje += reg.valor_recebido || 0;
+                }
+                console.log(`✅ GESTOR - Total do dia: R$ ${totalHoje.toFixed(2)} (${registros.length} registros)`);
+            } else {
+                console.error('❌ Gestor - Erro na requisição:', res.status);
+            }
+        } 
+        else if (currentUser.cargo === 'supervisor') {
+            // 🔥 SUPERVISOR: Buscar registros APENAS da equipe
+            const equipeDoUsuario = equipes.find(e => e.id === currentUser.equipe_id);
+            
+            if (!equipeDoUsuario) {
+                console.log('⚠️ Supervisor não está vinculado a nenhuma equipe');
+                return 0;
+            }
+            
+            // Buscar todos os membros da equipe (operadores, elite, e o próprio supervisor)
+            const membrosDaEquipe = usuarios.filter(u => 
+                u.equipe_id === equipeDoUsuario.id && 
+                (u.cargo === 'operador' || u.cargo === 'elite' || u.cargo === 'supervisor') && 
+                u.status === 'ativo'
+            );
+            
+            if (membrosDaEquipe.length === 0) {
+                console.log('⚠️ Nenhum membro ativo na equipe');
+                return 0;
+            }
+            
+            // Buscar registros de cada membro individualmente (mais confiável)
+            for (const membro of membrosDaEquipe) {
+                const url = `${SUPABASE_URL}/rest/v1/recebimentos?select=valor_recebido&usuario_id=eq.${membro.id}&data_pagamento=eq.${dataHoje}`;
+                const res = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                
+                if (res.ok) {
+                    const registros = await res.json();
+                    let somaMembro = 0;
+                    for (const reg of registros) {
+                        somaMembro += reg.valor_recebido || 0;
+                    }
+                    if (somaMembro > 0) {
+                        totalHoje += somaMembro;
+                        console.log(`  └─ ${membro.nome}: R$ ${somaMembro.toFixed(2)}`);
+                    }
+                }
+            }
+            console.log(`✅ SUPERVISOR (${equipeDoUsuario.nome}) - Total do dia: R$ ${totalHoje.toFixed(2)}`);
+        } 
+        else {
+            // 🔥 OPERADOR / ELITE: Buscar apenas seus próprios registros
+            const url = `${SUPABASE_URL}/rest/v1/recebimentos?select=valor_recebido&usuario_id=eq.${currentUser.id}&data_pagamento=eq.${dataHoje}`;
+            const res = await fetch(url, {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            
+            if (res.ok) {
+                const registros = await res.json();
+                for (const reg of registros) {
+                    totalHoje += reg.valor_recebido || 0;
+                }
+                const cargoLabel = currentUser.cargo === 'elite' ? 'ELITE' : 'OPERADOR';
+                console.log(`✅ ${cargoLabel} (${currentUser.nome}) - Total do dia: R$ ${totalHoje.toFixed(2)} (${registros.length} registros)`);
+            }
+        }
+        
+        return totalHoje;
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar total do dia:', error);
+        return 0;
+    }
+}
+
+async function atualizarQuadranteFlutuante() {
+    const card = document.getElementById('floatingDailyCard');
+    const valueElement = document.getElementById('dailyValue');
+    const titleElement = card?.querySelector('.daily-title');
+    
+    if (!card || !valueElement) return;
+    
+    // Atualizar título dinamicamente (caso o usuário troque de perfil)
+    if (titleElement) {
+        if (currentUser.cargo === 'gestor') {
+            titleElement.innerHTML = '🏢 RECEBIDO DO SETOR';
+        } else if (currentUser.cargo === 'supervisor') {
+            titleElement.innerHTML = '👥 RECEBIDO DA EQUIPE';
+        } else {
+            titleElement.innerHTML = '📅 SEU RECEBIDO HOJE';
+        }
+    }
+    
+    // Mostrar loading
+    card.classList.add('loading');
+    valueElement.innerHTML = '🔄';
+    
+    const total = await buscarTotalDiaAtual();
+    
+    // Remover loading e mostrar valor
+    card.classList.remove('loading');
+    
+    if (total > 0) {
+        valueElement.innerHTML = formatMoney(total);
+        card.style.background = 'linear-gradient(135deg, #28A745, #1E7B4B)';
+    } else {
+        valueElement.innerHTML = 'R$ 0,00';
+        card.style.background = 'linear-gradient(135deg, #6C757D, #495057)';
+    }
+}
+
+function iniciarAtualizacaoQuadrante() {
+    // Atualizar apenas uma vez ao carregar a página
+    setTimeout(() => atualizarQuadranteFlutuante(), 500);
+    
+    // 🔥 REMOVIDO o setInterval - NÃO atualiza automaticamente mais!
+    // O quadrante só será atualizado quando:
+    // 1. A página for recarregada
+    // 2. Quando uma importação de dados for concluída (via atualizarDadosImediatos)
+}
+
+function pararAtualizacaoQuadrante() {
+    // Mantido para compatibilidade, mas não há mais intervalo para limpar
+    if (dailyTotalInterval) {
+        clearInterval(dailyTotalInterval);
+        dailyTotalInterval = null;
+    }
+}
+
+async function abrirAnaliticoComFiltroHoje() {
+    if (!currentUser) return;
+    
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const dataHoje = `${ano}-${mes}-${dia}`;
+    
+    // Abrir o analítico normalmente
+    await abrirAnalitico();
+    
+    // Aguardar o modal ser criado e aplicar o filtro da data atual
+    setTimeout(() => {
+        const inputDataInicio = document.getElementById('analiticoDataInicio');
+        const inputDataFim = document.getElementById('analiticoDataFim');
+        const btnBuscar = document.getElementById('btnBuscarAnalitico');
+        
+        if (inputDataInicio && inputDataFim && btnBuscar) {
+            inputDataInicio.value = dataHoje;
+            inputDataFim.value = dataHoje;
+            btnBuscar.click();
+            
+            // Mostrar toast de confirmação
+            showToast(`📅 Filtrando registros de ${dia}/${mes}/${ano}`);
+        }
+    }, 500);
+}
     
     checkAuth();
 </script>
