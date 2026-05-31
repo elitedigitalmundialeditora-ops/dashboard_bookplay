@@ -4291,51 +4291,94 @@ function carregarOperadorDashboard() {
 }
 
     function carregarVisaoEquipe() {
-        const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
-        const equipeDoUsuario = equipes.find(e => e.id === currentUser.equipe_id);
-        if (!equipeDoUsuario) {
-            document.getElementById('visaoEquipeContent').innerHTML = '<div class="no-data-message">Você não está associado a nenhuma equipe.</div>';
-            return;
-        }
-        
-        const metaEquipeObj = metasEquipe.find(me => me?.equipe_id === equipeDoUsuario.id && me?.mes === mes && me?.ano === ano);
-        const metaEquipe = metaEquipeObj?.meta || 100000;
-        const membros = usuarios.filter(u => u.equipe_id === equipeDoUsuario.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
-        
-        let totalRecebido = 0;
-        let membrosComValores = [];
-        
-        for (let m of membros) {
-            const mo = metas.find(meta => meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano);
-            const recebido = mo?.recebido || 0;
-            totalRecebido += recebido;
-            membrosComValores.push({ nome: m.nome, recebido: recebido });
-        }
-        
-        const projecaoEquipe = calcularProjecao(metaEquipe, totalRecebido);
-        const projecaoHex = getProjecaoColorHex(projecaoEquipe);
-        const esperadoEquipe = calcularEsperado(metaEquipe);
-        const diferenca = totalRecebido - esperadoEquipe;
-        const circumference = 2 * Math.PI * 80;
-        const dashArray = (projecaoEquipe / 100) * circumference;
-        
-        const rankingMembros = [...membrosComValores].sort((a, b) => b.recebido - a.recebido).slice(0, 5);
-        
-        const html = `
-            <div class="supervisor-metrics-grid">
-                <div class="metric-card"><div class="metric-title">💰 TOTAL RECEBIDO DA EQUIPE</div><div class="metric-value">${formatMoney(totalRecebido)}</div><div class="metric-sub">Meta da Equipe: ${formatMoney(metaEquipe)}</div></div>
-                <div class="metric-card"><div class="metric-title">📈 PROJEÇÃO DA EQUIPE</div><div class="circle-chart-container"><div class="circle-chart"><svg viewBox="0 0 200 200"><circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/><circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/></svg><div class="percentage-text" style="color: ${projecaoHex}">${projecaoEquipe.toFixed(1)}%</div></div></div></div>
-                <div class="metric-card"><div class="metric-title">🎯 VALOR ESPERADO DA EQUIPE</div><div class="metric-value">${formatMoney(esperadoEquipe)}</div><div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div></div>
-                <div class="metric-card"><div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div><div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}</div><div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div></div>
-            </div>
-            <div class="ranking-operador">
-                <h4>🏆 Top 5 - Membros da Equipe</h4>
-                ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `<li><div class="ranking-position">${idx + 1}</div><div class="ranking-name">${m.nome}</div></li>`).join('')}</ul>` : '<p class="no-data-message">Nenhum membro encontrado nesta equipe.</p>'}
-            </div>
-        `;
-        
-        document.getElementById('visaoEquipeContent').innerHTML = html;
+    const mes = new Date().getMonth()+1, ano = new Date().getFullYear();
+    const equipeDoUsuario = equipes.find(e => e.id === currentUser.equipe_id);
+    if (!equipeDoUsuario) {
+        document.getElementById('visaoEquipeContent').innerHTML = '<div class="no-data-message">Você não está associado a nenhuma equipe.</div>';
+        return;
     }
+    
+    const metaEquipeObj = metasEquipe.find(me => me?.equipe_id === equipeDoUsuario.id && me?.mes === mes && me?.ano === ano);
+    const metaEquipe = metaEquipeObj?.meta || 100000;
+    
+    // 🔥 CORREÇÃO: Incluir TODOS os membros (operadores, elite E supervisor)
+    const membros = usuarios.filter(u => 
+        u.equipe_id === equipeDoUsuario.id && 
+        (u.cargo === 'operador' || u.cargo === 'elite' || u.cargo === 'supervisor') && 
+        u.status === 'ativo'
+    );
+    
+    let totalRecebido = 0;
+    let membrosComValores = [];
+    
+    for (let m of membros) {
+        const mo = metas.find(meta => meta?.usuario_id === m.id && meta?.mes === mes && meta?.ano === ano);
+        const recebido = mo?.recebido || 0;
+        totalRecebido += recebido;
+        membrosComValores.push({ 
+            nome: m.nome, 
+            recebido: recebido,
+            cargo: m.cargo 
+        });
+    }
+    
+    const projecaoEquipe = calcularProjecao(metaEquipe, totalRecebido);
+    const projecaoHex = getProjecaoColorHex(projecaoEquipe);
+    const esperadoEquipe = calcularEsperado(metaEquipe);
+    const diferenca = totalRecebido - esperadoEquipe;
+    const circumference = 2 * Math.PI * 80;
+    const dashArray = (projecaoEquipe / 100) * circumference;
+    
+    // Ordenar por recebido (maior para menor)
+    const rankingMembros = [...membrosComValores].sort((a, b) => b.recebido - a.recebido).slice(0, 10);
+    
+    const html = `
+        <div class="supervisor-metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">💰 TOTAL RECEBIDO DA EQUIPE</div>
+                <div class="metric-value">${formatMoney(totalRecebido)}</div>
+                <div class="metric-sub">Meta da Equipe: ${formatMoney(metaEquipe)}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">📈 PROJEÇÃO DA EQUIPE</div>
+                <div class="circle-chart-container">
+                    <div class="circle-chart">
+                        <svg viewBox="0 0 200 200">
+                            <circle class="bg-circle" cx="100" cy="100" r="80" stroke="#E2E8F0" fill="none" stroke-width="12"/>
+                            <circle class="progress-circle" cx="100" cy="100" r="80" stroke="${projecaoHex}" fill="none" stroke-width="12" stroke-dasharray="${dashArray} ${circumference}" stroke-linecap="round"/>
+                        </svg>
+                        <div class="percentage-text" style="color: ${projecaoHex}">${projecaoEquipe.toFixed(1)}%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🎯 VALOR ESPERADO DA EQUIPE</div>
+                <div class="metric-value">${formatMoney(esperadoEquipe)}</div>
+                <div class="metric-sub">Com base em ${getDiasPassados()} de ${getDiasUteis()} dias úteis</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">⚖️ DIFERENÇA PARA PROJEÇÃO</div>
+                <div class="metric-value ${diferenca >= 0 ? 'positive-value' : 'negative-value'}">
+                    ${diferenca >= 0 ? '+' : '-'} ${formatMoney(Math.abs(diferenca))}
+                </div>
+                <div class="metric-sub">${diferenca >= 0 ? 'Acima da meta projetada' : 'Abaixo da meta projetada'}</div>
+            </div>
+        </div>
+        <div class="ranking-operador">
+    <h4>🏆 Ranking da Equipe - Top ${rankingMembros.length}</h4>
+    ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `
+        <li style="${m.cargo === 'supervisor' ? 'background: #FFF3CD; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
+            <div class="ranking-position">${idx + 1}</div>
+            <div class="ranking-name" style="${m.cargo === 'supervisor' ? 'font-weight: 800; color: #856404;' : ''}">
+                ${m.nome} ${m.cargo === 'supervisor' ? '👔 (Supervisor)' : ''}
+            </div>
+        </li>
+    `).join('')}</ul>` : '<p class="no-data-message">Nenhum membro encontrado nesta equipe.</p>'}
+</div>
+    `;
+    
+    document.getElementById('visaoEquipeContent').innerHTML = html;
+}
 
     function carregarVisaoSetor() {
     //console.log('🔄 Carregando Visão do Setor - Usuário:', currentUser?.nome, 'Cargo:', currentUser?.cargo);
@@ -4711,12 +4754,18 @@ function calcularQuartilGestor() {
         return;
     }
     
+    // 🔥 CORREÇÃO: Incluir TODOS os membros (operadores + elite + supervisor)
+    let membros = usuarios.filter(u => 
+        u.equipe_id === supervisorEquipe.id && 
+        (u.cargo === 'operador' || u.cargo === 'elite' || u.cargo === 'supervisor') && 
+        u.status === 'ativo'
+    );
+    
     // 🔥 CALCULAR QUARTIL DA EQUIPE
     const quartilInfo = calcularQuartilSupervisor(currentUser.id, supervisorEquipe.id);
     
     let metaEquipeObj = metasEquipe.find(me => me?.equipe_id === supervisorEquipe.id && me?.mes === mes && me?.ano === ano);
     let metaEquipe = metaEquipeObj?.meta || 100000;
-    let membros = usuarios.filter(u => u.equipe_id === supervisorEquipe.id && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
     let totalRecebido = 0;
     let dadosMembros = [];
     
@@ -4725,29 +4774,35 @@ function calcularQuartilGestor() {
         if(mo) {
             totalRecebido += mo.recebido || 0;
             const projecao = calcularProjecao(mo.meta, mo.recebido);
-            dadosMembros.push({ id: m.id, nome: m.nome, recebido: mo.recebido || 0, projecao: projecao, cor: getProjecaoColor(projecao) });
+            dadosMembros.push({ 
+                id: m.id, 
+                nome: m.nome, 
+                recebido: mo.recebido || 0, 
+                projecao: projecao, 
+                cor: getProjecaoColor(projecao),
+                cargo: m.cargo
+            });
         }
     }
-    
-    const metaSupervisor = metas.find(m => m?.usuario_id === currentUser.id && m?.mes === mes && m?.ano === ano) || { recebido: 0 };
-    totalRecebido += metaSupervisor.recebido || 0;
     
     const projecaoEquipe = calcularProjecao(metaEquipe, totalRecebido);
     const projecaoHex = getProjecaoColorHex(projecaoEquipe);
     const esperadoEquipe = calcularEsperado(metaEquipe);
     const diferenca = totalRecebido - esperadoEquipe;
+    
+    // Ranking por PROJEÇÃO (como era antes)
     const rankingMembros = [...dadosMembros].sort((a, b) => b.projecao - a.projecao).slice(0, 5);
     const circumference = 2 * Math.PI * 80;
     const dashArray = (projecaoEquipe / 100) * circumference;
     
     // 🔥 CARD DO QUARTIL DA EQUIPE
-const quartilCard = quartilInfo ? `
-    <div class="metric-card" style="background: linear-gradient(135deg, #0A2F44, ${quartilInfo.corBg}); color: white;">
-        <div class="metric-title" style="color: rgba(255,255,255,0.9);">${quartilInfo.icone} ANÁLISE POR QUARTIL - EQUIPE</div>
-        <div class="metric-value" style="color: white; font-size: 1rem;">${quartilInfo.quartilAtual}</div>
-        <div class="metric-sub" style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 0.85rem;">${quartilInfo.mensagem}</div>
-    </div>
-` : '';
+    const quartilCard = quartilInfo ? `
+        <div class="metric-card" style="background: linear-gradient(135deg, #0A2F44, ${quartilInfo.corBg}); color: white;">
+            <div class="metric-title" style="color: rgba(255,255,255,0.9);">${quartilInfo.icone} ANÁLISE POR QUARTIL - EQUIPE</div>
+            <div class="metric-value" style="color: white; font-size: 1rem;">${quartilInfo.quartilAtual}</div>
+            <div class="metric-sub" style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 0.85rem;">${quartilInfo.mensagem}</div>
+        </div>
+    ` : '';
 
     const supervisorHtml = `
         <div class="supervisor-metrics-grid">
@@ -4785,9 +4840,11 @@ const quartilCard = quartilInfo ? `
         <div class="ranking-supervisor">
             <h4>🏆 Top 5 - Melhor Projeção da Equipe</h4>
             ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `
-                <li>
+                <li style="${m.cargo === 'supervisor' ? 'background: #FFF3CD; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
                     <div class="ranking-position">${idx+1}</div>
-                    <div class="ranking-name">${m.nome}</div>
+                    <div class="ranking-name" style="${m.cargo === 'supervisor' ? 'font-weight: 800; color: #856404;' : ''}">
+                        ${m.nome} ${m.cargo === 'supervisor' ? '👔 (Você)' : ''}
+                    </div>
                     <div class="ranking-value">${formatMoney(m.recebido)}</div>
                     <div class="ranking-proj ${m.cor}">${m.projecao.toFixed(1)}%</div>
                 </li>
