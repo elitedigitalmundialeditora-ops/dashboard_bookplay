@@ -5088,7 +5088,6 @@ window.abrirModalEdicaoRapida = (usuarioId, nome, classeAtual, equipeAtual) => {
     const user = usuarios.find(u => u.id == usuarioId);
     const equipeIdAtual = user?.equipe_id || '';
     
-    
     // Recarregar equipes para garantir que estão atualizadas
     const equipesAtualizadas = [...equipes];
     
@@ -5109,7 +5108,14 @@ window.abrirModalEdicaoRapida = (usuarioId, nome, classeAtual, equipeAtual) => {
         </div>
         <div class="modal-field"><label>📁 Classe</label><select id="edit_rapida_classe">${classesOptions}</select></div>
         <div class="modal-field"><label>💰 Meta (R$)</label><input type="text" id="edit_rapida_meta" placeholder="Meta individual" oninput="formatarInputMoeda(this)"></div>
-        <div class="modal-actions"><button class="btn-modal-cancel" onclick="fecharModal()">Cancelar</button><button class="btn-modal-save" onclick="salvarEdicaoRapida('${usuarioId}', '${nome}')">Salvar</button></div></div></div>`;
+        <div class="modal-actions" style="justify-content: space-between;">
+            <button class="btn-danger" onclick="excluirUsuarioCompleto('${usuarioId}', '${nome}')" style="background: #DC3545; color: white; border: none; padding: 12px 20px; border-radius: 40px; cursor: pointer; font-weight: 600;">🗑️ EXCLUIR USUÁRIO</button>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn-modal-cancel" onclick="fecharModal()">Cancelar</button>
+                <button class="btn-modal-save" onclick="salvarEdicaoRapida('${usuarioId}', '${nome}')">Salvar</button>
+            </div>
+        </div>
+    </div></div>`;
     
     if (user) {
         document.getElementById('edit_rapida_cargo').value = user.cargo;
@@ -6662,6 +6668,189 @@ async function abrirAnaliticoComFiltroHoje() {
         }
     }, 500);
 }
+    
+    window.excluirUsuarioCompleto = async (usuarioId, nomeUsuario) => {
+    // Criar modal de confirmação
+    const modalHtml = `
+        <div id="modalConfirmarExclusao" class="modal-overlay" style="display: flex; z-index: 10002;">
+            <div class="modal-content" style="max-width: 500px; animation: fadeInUp 0.3s ease;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 60px; margin-bottom: 10px;">⚠️</div>
+                    <h3 style="color: #DC3545; font-size: 1.5rem; margin-bottom: 10px;">EXCLUSÃO PERMANENTE</h3>
+                    <p style="color: #334155; margin-bottom: 20px;">
+                        Você está prestes a excluir o usuário:<br>
+                        <strong style="color: #1E6DC3; font-size: 1.2rem;">${nomeUsuario}</strong>
+                    </p>
+                </div>
+                
+                <div style="background: #FFF3CD; border-left: 4px solid #FFC107; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <p style="color: #856404; margin: 0; font-size: 0.85rem;">
+                        <strong>📌 TODOS os dados serão removidos permanentemente:</strong>
+                    </p>
+                    <ul style="color: #856404; margin: 10px 0 0 20px; font-size: 0.85rem;">
+                        <li>👤 Dados pessoais (nome, login, senha)</li>
+                        <li>📊 Todas as metas cadastradas</li>
+                        <li>💰 Todos os registros de recebimentos</li>
+                        <li>📜 Histórico de ações do usuário</li>
+                        <li>🏢 Vínculos com equipes e classes</li>
+                    </ul>
+                </div>
+                
+                <div style="background: #F8FAFE; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #DC3545; display: block; margin-bottom: 8px;">
+                        🔐 Digite <strong style="font-size: 1rem;">EXCLUIR</strong> para confirmar:
+                    </label>
+                    <input type="text" id="confirmarExclusaoTexto" placeholder="Digite EXCLUIR aqui" 
+                           style="width: 100%; padding: 12px; border: 2px solid #E2E8F0; border-radius: 12px; font-size: 1rem; text-align: center; font-weight: 700;">
+                    <div id="erroConfirmacao" style="color: #DC3545; font-size: 0.75rem; margin-top: 5px; display: none;">
+                        ❌ Digite exatamente "EXCLUIR" (em maiúsculo)
+                    </div>
+                </div>
+                
+                <div class="modal-actions" style="display: flex; gap: 12px; justify-content: center;">
+                    <button id="btnCancelarExclusao" class="btn-modal-cancel" style="padding: 12px 24px; background: #6C757D; color: white;">
+                        Cancelar
+                    </button>
+                    <button id="btnConfirmarExclusao" class="btn-modal-save" style="padding: 12px 24px; background: #DC3545; color: white;" disabled>
+                        Confirmar Exclusão
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Adicionar o modal ao corpo
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Elementos do modal
+    const modal = document.getElementById('modalConfirmarExclusao');
+    const inputConfirmacao = document.getElementById('confirmarExclusaoTexto');
+    const btnConfirmar = document.getElementById('btnConfirmarExclusao');
+    const btnCancelar = document.getElementById('btnCancelarExclusao');
+    const erroDiv = document.getElementById('erroConfirmacao');
+    
+    // Função para verificar o texto digitado
+    const verificarTexto = () => {
+        const textoDigitado = inputConfirmacao.value.trim();
+        if (textoDigitado === 'EXCLUIR') {
+            btnConfirmar.disabled = false;
+            btnConfirmar.style.opacity = '1';
+            btnConfirmar.style.cursor = 'pointer';
+            erroDiv.style.display = 'none';
+        } else {
+            btnConfirmar.disabled = true;
+            btnConfirmar.style.opacity = '0.5';
+            btnConfirmar.style.cursor = 'not-allowed';
+            if (textoDigitado.length > 0) {
+                erroDiv.style.display = 'block';
+            } else {
+                erroDiv.style.display = 'none';
+            }
+        }
+    };
+    
+    // Eventos
+    inputConfirmacao.addEventListener('input', verificarTexto);
+    
+    // Cancelar
+    btnCancelar.onclick = () => {
+        modal.remove();
+        showToast('❌ Exclusão cancelada.');
+    };
+    
+    // Confirmar exclusão
+    btnConfirmar.onclick = async () => {
+        const textoDigitado = inputConfirmacao.value.trim();
+        if (textoDigitado !== 'EXCLUIR') {
+            erroDiv.style.display = 'block';
+            return;
+        }
+        
+        // Fechar modal de confirmação
+        modal.remove();
+        
+        // Mostrar loading
+        showToast('🔄 Processando exclusão...');
+        
+        try {
+            // 1. Buscar todas as metas do usuário
+            const metasDoUsuario = metas.filter(m => m?.usuario_id === Number(usuarioId));
+            for (const meta of metasDoUsuario) {
+                if (meta?.id) {
+                    await deleteFrom('metas', meta.id);
+                    console.log(`✅ Meta ${meta.id} excluída`);
+                }
+            }
+            
+            // 2. Buscar todos os recebimentos do usuário
+            const url = `${SUPABASE_URL}/rest/v1/recebimentos?usuario_id=eq.${usuarioId}`;
+            const res = await fetch(url, {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            
+            if (res.ok) {
+                const recebimentos = await res.json();
+                for (const recebimento of recebimentos) {
+                    if (recebimento?.id) {
+                        await fetch(`${SUPABASE_URL}/rest/v1/recebimentos?id=eq.${recebimento.id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'apikey': SUPABASE_ANON_KEY,
+                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                            }
+                        });
+                    }
+                }
+                console.log(`✅ ${recebimentos.length} recebimentos excluídos`);
+            }
+            
+            // 3. Buscar registros no histórico relacionados ao usuário
+            const historicosDoUsuario = historico.filter(h => h.usuario_id === Number(usuarioId) || h.usuario_nome === nomeUsuario);
+            for (const hist of historicosDoUsuario) {
+                if (hist?.id) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/historico?id=eq.${hist.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        }
+                    });
+                }
+            }
+            console.log(`✅ ${historicosDoUsuario.length} registros de histórico excluídos`);
+            
+            // 4. Por fim, excluir o próprio usuário
+            await deleteFrom('usuarios', usuarioId);
+            console.log(`✅ Usuário ${usuarioId} excluído`);
+            
+            // Registrar no histórico (usando o usuário atual, já que o excluído será removido)
+            await registrarHistorico('exclusao', `Usuário "${nomeUsuario}" e todos os seus dados (metas, recebimentos, histórico) foram EXCLUÍDOS permanentemente do sistema`);
+            
+            // Fechar o modal de edição se estiver aberto
+            fecharModal();
+            
+            // Recarregar todos os dados
+            await atualizarDadosImediatos();
+            
+            showToast(`✅ Usuário "${nomeUsuario}" e todos os seus dados foram excluídos permanentemente!`);
+            
+        } catch (error) {
+            console.error('❌ Erro ao excluir usuário:', error);
+            showToast('❌ Erro ao excluir usuário. Verifique o console.');
+        }
+    };
+    
+    // Fechar modal ao clicar fora (opcional)
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+            showToast('❌ Exclusão cancelada.');
+        }
+    });
+};
     
     checkAuth();
 </script>
