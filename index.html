@@ -7295,15 +7295,15 @@ function atualizarEvolucaoSetor(dadosPorDia, totalMetas) {
     // Buscar o usuário completo para pegar a foto
     const usuarioCompleto = usuarios.find(usr => usr.id === u.id);
     const fotoBase64 = usuarioCompleto?.foto || null;
-    const hasPhoto = !!fotoBase64;
-    
-    // Gerar HTML da foto ou inicial
-    let fotoHtml = '';
-    if (hasPhoto) {
-        fotoHtml = `<img src="${fotoBase64}" alt="${u.nome}">`;
-    } else {
-        fotoHtml = `<span style="font-size: 14px; font-weight: 700; color: #1E6DC3;">${u.nome.charAt(0).toUpperCase()}</span>`;
-    }
+const hasPhoto = !!fotoBase64;
+
+let fotoHtml = '';
+if (hasPhoto) {
+    fotoHtml = `<img src="${fotoBase64}" alt="${u.nome}" 
+                onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\'font-size:14px;font-weight:700;color:#1E6DC3;\\'>${u.nome.charAt(0).toUpperCase()}</span>'">`;
+} else {
+    fotoHtml = `<span style="font-size: 14px; font-weight: 700; color: #1E6DC3;">${u.nome.charAt(0).toUpperCase()}</span>`;
+}
     
     return `<tr class="clickable-row" onclick="abrirModalEdicaoRapida('${u.id}', '${u.nome}', '${u.classe}', '${u.equipe}')" style="cursor: pointer;">
         <td><div class="user-photo-thumb ${hasPhoto ? 'has-photo' : ''}">${fotoHtml}</div></td>
@@ -8231,8 +8231,224 @@ if(currentUser.cargo === 'supervisor') {
     
     
 // ============================================
-// FUNÇÕES DE PERFIL DO USUÁRIO COM CROP
+// NOVAS FUNÇÕES COM SUPABASE STORAGE
 // ============================================
+
+const STORAGE_BUCKET = 'fotos-perfil';
+
+// 🔹 FUNÇÃO PARA UPLOAD DA FOTO
+async function salvarFotoPerfil(usuarioId, base64) {
+    try {
+        // Converter Base64 para Blob
+        const response = await fetch(base64);
+        const blob = await response.blob();
+        
+        // Nome único para o arquivo
+        const extensao = blob.type.split('/')[1] || 'png';
+        const nomeArquivo = `${usuarioId}-${Date.now()}.${extensao}`;
+        const caminho = `usuarios/${nomeArquivo}`;
+        
+        // Upload para Storage
+        const formData = new FormData();
+        formData.append('file', blob, nomeArquivo);
+        
+        const uploadRes = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${caminho}`,
+            {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: formData
+            }
+        );
+        
+        if (!uploadRes.ok) {
+            const errorText = await uploadRes.text();
+            console.error('Erro no upload:', errorText);
+            return false;
+        }
+        
+        // URL pública da imagem
+        const urlPublica = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${caminho}`;
+        
+        // Atualizar o campo 'foto' no banco com a URL pública
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ foto: urlPublica })
+        });
+        
+        if (!patchRes.ok) {
+            console.error('Erro ao atualizar URL no banco');
+            return false;
+        }
+        
+        // Atualizar o currentUser e a lista de usuários
+        const usuarioAtualizado = usuarios.find(u => u.id === usuarioId);
+        if (usuarioAtualizado) {
+            usuarioAtualizado.foto = urlPublica;
+        }
+        if (currentUser && currentUser.id === usuarioId) {
+            currentUser.foto = urlPublica;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+        
+        // Atualizar a interface
+        atualizarCirculoPerfil(urlPublica);
+        
+        console.log('✅ Foto salva com sucesso:', urlPublica);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar foto:', error);
+        return false;
+    }
+}
+
+// 🔹 FUNÇÃO PARA REMOVER FOTO
+function removerFotoPerfil() {
+    // Criar modal de confirmação
+    const modalHtml = `
+        <div id="modalConfirmRemoverFoto" class="modal-confirm-overlay" style="display: flex;">
+            <div class="modal-confirm-content">
+                <div class="modal-confirm-icon">🗑️</div>
+                <div class="modal-confirm-title">Remover Foto de Perfil</div>
+                <div class="modal-confirm-message">
+                    Tem certeza que deseja remover sua foto de perfil?
+                </div>
+                <div class="modal-confirm-actions">
+                    <button class="btn-confirm-no" onclick="fecharModalConfirmRemover()">Cancelar</button>
+                    <button class="btn-confirm-yes" onclick="confirmarRemoverFoto()">Sim, Remover</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+async function confirmarRemoverFoto() {
+    fecharModalConfirmRemover();
+    
+    try {
+        // Se tiver URL antiga, extrair o caminho para deletar do Storage
+        if (currentUser.foto && currentUser.foto.includes('/storage/v1/object/public/')) {
+            const urlObj = new URL(currentUser.foto);
+            const pathParts = urlObj.pathname.split('/');
+            // Exemplo: /storage/v1/object/public/fotos-perfil/usuarios/123-123456.png
+            const caminhoStorage = pathParts.slice(5).join('/'); // Remove os primeiros 5 segmentos
+            
+            // Deletar do Storage
+            await fetch(
+                `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${caminhoStorage}`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                }
+            );
+        }
+        
+        // Atualizar banco para null
+        await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${currentUser.id}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ foto: null })
+        });
+        
+        // Atualizar localmente
+        currentUser.foto = null;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        const userIndex = usuarios.findIndex(u => u.id === currentUser.id);
+        if (userIndex !== -1) {
+            usuarios[userIndex].foto = null;
+        }
+        
+        // Atualizar UI
+        atualizarCirculoPerfil(null);
+        fecharModalPerfil();
+        
+        showToast('✅ Foto removida com sucesso!');
+        
+    } catch (error) {
+        console.error('❌ Erro ao remover foto:', error);
+        showToast('❌ Erro ao remover a foto.');
+    }
+}
+
+// 🔹 FUNÇÃO PARA ATUALIZAR O CÍRCULO DE PERFIL (COM URL DO STORAGE)
+function atualizarCirculoPerfil(url) {
+    const circle = document.getElementById('profileCircle');
+    const initial = document.getElementById('profileInitial');
+    const img = document.getElementById('profileImage');
+    
+    if (!circle) return;
+    
+    if (url) {
+        img.src = url;
+        img.style.display = 'block';
+        img.onerror = function() {
+            // Fallback: se a imagem não carregar, mostrar inicial
+            img.style.display = 'none';
+            initial.style.display = 'block';
+            circle.style.background = 'linear-gradient(135deg, #1E6DC3, #0F3B6F)';
+            circle.style.border = '2px solid rgba(255,255,255,0.2)';
+            initial.textContent = currentUser?.nome?.charAt(0).toUpperCase() || '👤';
+        };
+        initial.style.display = 'none';
+        circle.style.background = 'transparent';
+        circle.style.border = '2px solid #28A745';
+    } else {
+        img.style.display = 'none';
+        initial.style.display = 'block';
+        circle.style.background = 'linear-gradient(135deg, #1E6DC3, #0F3B6F)';
+        circle.style.border = '2px solid rgba(255,255,255,0.2)';
+        if (currentUser) {
+            initial.textContent = currentUser.nome?.charAt(0).toUpperCase() || '👤';
+        }
+    }
+}
+
+// 🔹 FUNÇÃO PARA CARREGAR A FOTO DO PERFIL
+function inicializarPerfil() {
+    if (!currentUser) return;
+    
+    const initial = document.getElementById('profileInitial');
+    if (initial) {
+        initial.textContent = currentUser.nome?.charAt(0).toUpperCase() || '👤';
+    }
+    
+    if (currentUser.foto) {
+        atualizarCirculoPerfil(currentUser.foto);
+    }
+    
+    // Verificar se o usuário no banco tem foto mais recente
+    const usuarioAtualizado = usuarios.find(u => u.id === currentUser.id);
+    if (usuarioAtualizado && usuarioAtualizado.foto && !currentUser.foto) {
+        currentUser.foto = usuarioAtualizado.foto;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        atualizarCirculoPerfil(currentUser.foto);
+    }
+}
+
+// 🔹 FUNÇÃO PARA FECHAR MODAL CONFIRMAR REMOVER
+function fecharModalConfirmRemover() {
+    const modal = document.getElementById('modalConfirmRemoverFoto');
+    if (modal) modal.remove();
+}
+
 
 let cropperInstance = null;
 let imagemOriginalPerfil = null;
@@ -8243,11 +8459,14 @@ function abrirModalPerfil() {
     const usuario = usuarios.find(u => u.id === currentUser.id);
     if (!usuario) return;
     
-    // Verificar se já existe um modal e remover
     const modalExistente = document.getElementById('modalPerfil');
     if (modalExistente) modalExistente.remove();
     
-    // Criar o modal com botão de mostrar senha
+    // Verificar se a foto é uma URL do Storage ou Base64 antigo
+    const fotoUrl = usuario.foto && usuario.foto.startsWith('http') 
+        ? usuario.foto 
+        : usuario.foto || null;
+    
     const modalHtml = `
         <div id="modalPerfil" class="modal-perfil" style="display: flex;">
             <div class="modal-content">
@@ -8256,7 +8475,11 @@ function abrirModalPerfil() {
                 </div>
                 
                 <div class="perfil-avatar-large" id="perfilAvatarLarge">
-                    ${usuario.foto ? `<img src="${usuario.foto}" alt="Foto de perfil" id="perfilAvatarImg">` : `<span class="default-icon">${usuario.nome.charAt(0).toUpperCase()}</span>`}
+                    ${fotoUrl 
+                        ? `<img src="${fotoUrl}" alt="Foto de perfil" id="perfilAvatarImg" 
+                             onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'default-icon\\'>${usuario.nome.charAt(0).toUpperCase()}</span>'">` 
+                        : `<span class="default-icon">${usuario.nome.charAt(0).toUpperCase()}</span>`
+                    }
                 </div>
                 
                 <div class="perfil-info">
@@ -8292,9 +8515,9 @@ function abrirModalPerfil() {
                 
                 <div class="perfil-actions">
                     <button class="btn-foto" onclick="abrirModalCrop()">
-                        📷 ${usuario.foto ? 'Alterar Foto' : 'Adicionar Foto'}
+                        📷 ${fotoUrl ? 'Alterar Foto' : 'Adicionar Foto'}
                     </button>
-                    ${usuario.foto ? `<button class="btn-foto-remover" onclick="removerFotoPerfil()">🗑️ Remover Foto</button>` : ''}
+                    ${fotoUrl ? `<button class="btn-foto-remover" onclick="removerFotoPerfil()">🗑️ Remover Foto</button>` : ''}
                     <button class="btn-fechar-perfil" onclick="fecharModalPerfil()">Fechar</button>
                 </div>
                 
@@ -8305,7 +8528,6 @@ function abrirModalPerfil() {
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Fechar ao clicar fora
     document.getElementById('modalPerfil').addEventListener('click', function(e) {
         if (e.target === this) fecharModalPerfil();
     });
@@ -8661,157 +8883,12 @@ function fecharModalCrop() {
     }
 }
 
-// ============================================
-// FUNÇÕES DE SALVAR/REMOVER FOTO
-// ============================================
-
-async function salvarFotoPerfil(usuarioId, base64) {
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioId}`, {
-            method: 'PATCH',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ foto: base64 })
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Erro ao salvar foto:', errorText);
-            return false;
-        }
-        
-        console.log('✅ Foto salva com sucesso!');
-        return true;
-        
-    } catch (error) {
-        console.error('Erro ao salvar foto:', error);
-        return false;
-    }
-}
-
-function removerFotoPerfil() {
-    // Criar modal de confirmação
-    const modalHtml = `
-        <div id="modalConfirmRemoverFoto" class="modal-confirm-overlay" style="display: flex;">
-            <div class="modal-confirm-content">
-                <div class="modal-confirm-icon">🗑️</div>
-                <div class="modal-confirm-title">Remover Foto de Perfil</div>
-                <div class="modal-confirm-message">
-                    Tem certeza que deseja remover sua foto de perfil?
-                    <br><br>
-                    <span style="font-size: 0.85rem; color: #6C757D;">Esta ação pode ser desfeita adicionando uma nova foto.</span>
-                </div>
-                <div class="modal-confirm-actions">
-                    <button class="btn-confirm-no" onclick="fecharModalConfirmRemover()">Cancelar</button>
-                    <button class="btn-confirm-yes" onclick="confirmarRemoverFoto()">Sim, Remover</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
 
 function fecharModalConfirmRemover() {
     const modal = document.getElementById('modalConfirmRemoverFoto');
     if (modal) modal.remove();
 }
 
-async function confirmarRemoverFoto() {
-    fecharModalConfirmRemover();
-    
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${currentUser.id}`, {
-            method: 'PATCH',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ foto: null })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Erro ao remover foto');
-        }
-        
-        const avatarLarge = document.querySelector('.perfil-avatar-large');
-        if (avatarLarge) {
-            avatarLarge.innerHTML = `<span class="default-icon">${currentUser.nome.charAt(0).toUpperCase()}</span>`;
-        }
-        
-        atualizarCirculoPerfil(null);
-        
-        currentUser.foto = null;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        
-        const userIndex = usuarios.findIndex(u => u.id === currentUser.id);
-        if (userIndex !== -1) {
-            usuarios[userIndex].foto = null;
-        }
-        
-        const removerBtn = document.querySelector('.btn-foto-remover');
-        if (removerBtn) removerBtn.remove();
-        
-        const btnFoto = document.querySelector('.btn-foto');
-        if (btnFoto) btnFoto.textContent = '📷 Adicionar Foto';
-        
-        document.getElementById('perfilMensagem').textContent = '✅ Foto removida com sucesso!';
-        showToast('✅ Foto removida!');
-        
-    } catch (error) {
-        console.error('Erro ao remover foto:', error);
-        document.getElementById('perfilMensagem').textContent = '❌ Erro ao remover a foto.';
-        showToast('❌ Erro ao remover a foto.');
-    }
-}
-
-function atualizarCirculoPerfil(base64) {
-    const circle = document.getElementById('profileCircle');
-    const initial = document.getElementById('profileInitial');
-    const img = document.getElementById('profileImage');
-    
-    if (!circle) return;
-    
-    if (base64) {
-        img.src = base64;
-        img.style.display = 'block';
-        initial.style.display = 'none';
-        circle.style.background = 'transparent';
-        circle.style.border = '2px solid #28A745';
-    } else {
-        img.style.display = 'none';
-        initial.style.display = 'block';
-        circle.style.background = 'linear-gradient(135deg, #1E6DC3, #0F3B6F)';
-        circle.style.border = '2px solid rgba(255,255,255,0.2)';
-        if (currentUser) {
-            initial.textContent = currentUser.nome.charAt(0).toUpperCase();
-        }
-    }
-}
-
-function inicializarPerfil() {
-    if (!currentUser) return;
-    
-    const initial = document.getElementById('profileInitial');
-    if (initial) {
-        initial.textContent = currentUser.nome.charAt(0).toUpperCase();
-    }
-    
-    if (currentUser.foto) {
-        atualizarCirculoPerfil(currentUser.foto);
-    }
-    
-    const usuarioAtualizado = usuarios.find(u => u.id === currentUser.id);
-    if (usuarioAtualizado && usuarioAtualizado.foto && !currentUser.foto) {
-        currentUser.foto = usuarioAtualizado.foto;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        atualizarCirculoPerfil(currentUser.foto);
-    }
-}
 
 // Chamar inicialização após carregar os dados
 // Adicione esta linha dentro da função checkAuth(), após carregar o usuário:
@@ -10122,10 +10199,50 @@ window.enviarMensagem = enviarMensagem;
 window.selecionarUsuario = selecionarUsuario;
     
     checkAuth();
+    
+     async function migrarFotosParaStorage() {
+        console.log('🔄 Iniciando migração de fotos...');
+        
+        const usuariosComFoto = usuarios.filter(u => u.foto && u.foto.startsWith('data:image'));
+        
+        if (usuariosComFoto.length === 0) {
+            console.log('✅ Nenhuma foto em Base64 para migrar.');
+            return;
+        }
+        
+        console.log(`📸 Encontradas ${usuariosComFoto.length} fotos para migrar.`);
+        
+        let sucessos = 0;
+        let erros = 0;
+        
+        for (const user of usuariosComFoto) {
+            try {
+                console.log(`⏳ Migrando foto de ${user.nome}...`);
+                
+                const resultado = await salvarFotoPerfil(user.id, user.foto);
+                
+                if (resultado) {
+                    sucessos++;
+                    console.log(`✅ Foto de ${user.nome} migrada com sucesso!`);
+                } else {
+                    erros++;
+                    console.error(`❌ Erro ao migrar foto de ${user.nome}`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+            } catch (error) {
+                erros++;
+                console.error(`❌ Erro ao migrar ${user.nome}:`, error);
+            }
+        }
+        
+        console.log(`📊 Migração concluída! Sucessos: ${sucessos}, Erros: ${erros}`);
+        await carregarDados();
+        carregarDashboard();
+    }
+    
+    console.log('💡 Para migrar fotos para o Storage, execute no console: migrarFotosParaStorage()');
 </script>
-<div class="copyright">
-    Desenvolvedor: Paulo Silva + IA - Elite<br>
-    Idealizador: Matheus Costa - Supervisor
-</div>
 </body>
 </html>
