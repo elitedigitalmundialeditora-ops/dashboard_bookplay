@@ -5070,7 +5070,7 @@
 
             });
 
-            const rankingMembros = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).slice(0, 10).map(m => ({ id: m.id, nome: m.nome, isCurrentUser: m.isCurrentUser }));
+            const rankingMembros = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).slice(0, 10);
 
             const posicaoAtual = operadoresComRecebido.sort((a, b) => b.recebido - a.recebido).findIndex(m => m.id === currentUser.id) + 1;
 
@@ -5329,17 +5329,26 @@
                 const isImmediatelyAbove = userIndex !== -1 && idx === userIndex - 1;
                 const isImmediatelyBelow = userIndex !== -1 && idx === userIndex + 1;
 
+                let valorDisplay = '';
                 let badgeDisputa = '';
+
                 if (isImmediatelyAbove && userIndex !== -1) {
                     const currentUserObj = rankingMembros[userIndex];
-                    const gap = m.recebido - (currentUserObj ? currentUserObj.recebido : 0);
+                    const gap = Math.max(0, m.recebido - (currentUserObj ? currentUserObj.recebido : 0));
+                    valorDisplay = '';
                     badgeDisputa = `<span style="color: #DC2626; background: #FEE2E2; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="font-size: 10px;">▼</span> Falta ${formatMoney(gap)}</span>`;
                 } else if (isImmediatelyBelow && userIndex !== -1) {
                     const currentUserObj = rankingMembros[userIndex];
-                    const lead = (currentUserObj ? currentUserObj.recebido : 0) - m.recebido;
+                    const lead = Math.max(0, (currentUserObj ? currentUserObj.recebido : 0) - m.recebido);
+                    valorDisplay = '';
                     badgeDisputa = `<span style="color: #16A34A; background: #DCFCE7; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="font-size: 10px;">▲</span> Vantagem de ${formatMoney(lead)}</span>`;
                 } else if (isCurrentUser) {
-                    badgeDisputa = `<span style="color: #1E6DC3; background: #DBEAFE; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 0.75rem; margin-left: 8px;">Voce (${formatMoney(m.recebido)})</span>`;
+                    valorDisplay = `<span style="font-weight: 800; color: #1E6DC3;">${formatMoney(m.recebido)}</span>`;
+                    badgeDisputa = `<span style="color: #1E6DC3; background: #DBEAFE; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 0.75rem; margin-left: 8px;">Você (${formatMoney(m.recebido)})</span>`;
+                } else {
+                    // Oculta os valores dos demais colocados conforme solicitado
+                    valorDisplay = '';
+                    badgeDisputa = '';
                 }
 
                 return `
@@ -5348,7 +5357,7 @@
                     <div class="ranking-name" style="${isCurrentUser ? 'font-weight: 800; color: #1E6DC3;' : m.cargo === 'supervisor' ? 'font-weight: 800; color: #856404;' : ''}; display: flex; align-items: center; justify-content: space-between; width: 100%;">
                         <span>${idx + 1}º ${m.nome} ${m.cargo === 'supervisor' ? '(Supervisor)' : ''}</span>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-weight: 700; color: #0F3B6F;">${formatMoney(m.recebido)}</span>
+                            ${valorDisplay}
                             ${badgeDisputa}
                         </div>
                     </div>
@@ -5852,15 +5861,7 @@
             const html = `
 
         
-            <!-- BARRA DE ACOES EXECUTIVAS SUPERVISOR -->
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                <button onclick="window.copiarResumoTexto('supervisor')" class="btn" style="background: #0F3B6F; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15, 59, 111, 0.2);">
-                    Copiar Resumo da Equipe (Texto)
-                </button>
-                <button onclick="window.exportarCardImagem('supervisor')" class="btn" style="background: #1E6DC3; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(30, 109, 195, 0.25);">
-                    Exportar Card da Equipe (Imagem PNG)
-                </button>
-            </div>
+            
     
         <div class="supervisor-metrics-grid" style="grid-template-columns: repeat(5, 1fr);">
 
@@ -5950,21 +5951,49 @@
 
             <h4> Ranking da Equipe - Top ${rankingMembros.length}</h4>
 
-            ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `
+            ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => {
+                const isGestorOuSupervisor = currentUser?.cargo === 'gestor' || currentUser?.cargo === 'supervisor';
+                const userIndex = rankingMembros.findIndex(x => x.id === currentUser.id);
+                const isCurrentUser = m.id === currentUser.id;
+                const isImmediatelyAbove = userIndex !== -1 && idx === userIndex - 1;
+                const isImmediatelyBelow = userIndex !== -1 && idx === userIndex + 1;
 
-                <li style="${m.cargo === 'supervisor' ? 'background: #FFF3CD; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
+                let valorDisplay = '';
+                let badgeDisputa = '';
 
-                    <div class="ranking-position" style="${m.cargo === 'supervisor' ? 'border: 2px solid #856404; padding: 0; overflow: hidden;' : 'border: none; padding: 0; overflow: hidden;'}">${getFotoRanking(m.id, m.nome)}</div>
+                if (isImmediatelyAbove && userIndex !== -1) {
+                    const currentUserObj = rankingMembros[userIndex];
+                    const gap = Math.max(0, m.recebido - (currentUserObj ? currentUserObj.recebido : 0));
+                    valorDisplay = '';
+                    badgeDisputa = `<span style="color: #DC2626; background: #FEE2E2; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="font-size: 10px;">▼</span> Falta ${formatMoney(gap)}</span>`;
+                } else if (isImmediatelyBelow && userIndex !== -1) {
+                    const currentUserObj = rankingMembros[userIndex];
+                    const lead = Math.max(0, (currentUserObj ? currentUserObj.recebido : 0) - m.recebido);
+                    valorDisplay = '';
+                    badgeDisputa = `<span style="color: #16A34A; background: #DCFCE7; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="font-size: 10px;">▲</span> Vantagem de ${formatMoney(lead)}</span>`;
+                } else if (isCurrentUser) {
+                    valorDisplay = `<span style="font-weight: 800; color: #1E6DC3;">${formatMoney(m.recebido)}</span>`;
+                    badgeDisputa = `<span style="color: #1E6DC3; background: #DBEAFE; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 0.75rem; margin-left: 8px;">Você (${formatMoney(m.recebido)})</span>`;
+                } else if (isGestorOuSupervisor) {
+                    valorDisplay = `<span style="font-weight: 700; color: #0F3B6F;">${formatMoney(m.recebido)}</span>`;
+                    badgeDisputa = '';
+                } else {
+                    valorDisplay = '';
+                    badgeDisputa = '';
+                }
 
-                    <div class="ranking-name" style="${m.cargo === 'supervisor' ? 'font-weight: 800; color: #856404;' : ''}">
-
-                        ${m.nome} ${m.cargo === 'supervisor' ? ' (Supervisor)' : ''}
-
+                return `
+                <li style="${isCurrentUser ? 'background: #EFF6FF; border: 2px solid #1E6DC3; border-radius: 12px; padding: 12px; margin: 6px 0;' : m.cargo === 'supervisor' ? 'background: #FFF3CD; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
+                    <div class="ranking-position" style="border: none; padding: 0; overflow: hidden;">${getFotoRanking(m.id, m.nome)}</div>
+                    <div class="ranking-name" style="${isCurrentUser ? 'font-weight: 800; color: #1E6DC3;' : m.cargo === 'supervisor' ? 'font-weight: 800; color: #856404;' : ''}; display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span>${idx + 1}º ${m.nome} ${m.cargo === 'supervisor' ? '(Supervisor)' : ''}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${valorDisplay}
+                            ${badgeDisputa}
+                        </div>
                     </div>
-
                 </li>
-
-            `).join('')}</ul>` : '<p class="no-data-message">Nenhum membro encontrado nesta equipe.</p>'}
+            `}).join('')}</ul>` : '<p class="no-data-message">Nenhum membro encontrado nesta equipe.</p>'}
 
         </div>
 
@@ -8062,7 +8091,8 @@
 
     `;
 
-            document.getElementById('gestorDashboardContent').innerHTML = html;
+            const gDiv = document.getElementById('gestorDashboardContent'); if (gDiv) gDiv.innerHTML = html;
+            const vsDiv = document.getElementById('visaoSetorContent'); if (vsDiv) vsDiv.innerHTML = html;
 
             document.getElementById('gestorDashboardContent').classList.remove('hidden');
 
@@ -8462,7 +8492,7 @@
 
                 if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
 
-            } else if (currentUser.cargo === 'operador') {
+            } else if (currentUser.cargo === 'operador' || currentUser.cargo === 'elite') {
 
                 document.getElementById('gestorDashboardContent').classList.add('hidden');
 
@@ -8473,20 +8503,6 @@
                 document.getElementById('operadorDashboardContent').classList.remove('hidden');
 
                 carregarOperadorDashboard();
-
-                if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
-
-            } else if (currentUser.cargo === 'elite') {
-
-                document.getElementById('gestorDashboardContent').classList.add('hidden');
-
-                document.getElementById('supervisorDashboardContent').classList.add('hidden');
-
-                document.getElementById('operadorDashboardContent').classList.add('hidden');
-
-                document.getElementById('eliteDashboardContent').classList.remove('hidden');
-
-                carregarEliteDashboard();
 
                 if (btnAnalitico) btnAnalitico.style.display = 'inline-block';
 
@@ -11051,11 +11067,8 @@
 
             atualizarQuadranteFlutuante(); // 🔥 ADICIONE ESTA LINHA
 
-            carregarVisaoSetor();
-
-            carregarVisaoEquipe();
-
             if (currentUser?.cargo === 'gestor') {
+                carregarVisaoSetor();
 
                 carregarEquipesTabGestor();
 
@@ -11365,27 +11378,18 @@
 
                 let tabsHtml = `<button class="tab-btn active" onclick="switchTab('dashboard', event)">Meu Dashboard</button>`;
 
-                tabsHtml += `<button class="tab-btn" onclick="switchTab('detalhado', event)">Detalhado</button>`;
-
-                if (currentUser.cargo === 'gestor' || currentUser.cargo === 'supervisor' || currentUser.cargo === 'elite') {
-
-                    tabsHtml += `<button class="tab-btn" onclick="switchTab('admin', event)">Painel Admin</button><button class="tab-btn" onclick="switchTab('operadores', event)"> Usuários</button><button class="tab-btn" onclick="switchTab('equipes', event)">Equipes</button><button class="tab-btn" onclick="switchTab('usuarios', event)">Supervisores</button><button class="tab-btn" onclick="switchTab('historico', event)">Histórico</button>`;
-
-                }
-
-                if (currentUser.cargo === 'operador' || currentUser.cargo === 'elite') {
-
+                if (currentUser.cargo === 'gestor') {
+                    tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoSetor', event)">Visão do Setor</button>`;
+                    tabsHtml += `<button class="tab-btn" onclick="switchTab('admin', event)">Painel Admin</button><button class="tab-btn" onclick="switchTab('operadores', event)">Usuários</button><button class="tab-btn" onclick="switchTab('equipes', event)">Equipes</button><button class="tab-btn" onclick="switchTab('usuarios', event)">Supervisores</button><button class="tab-btn" onclick="switchTab('historico', event)">Histórico</button>`;
+                } else if (currentUser.cargo === 'supervisor') {
                     tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoEquipe', event)">Visão da Equipe</button>`;
-
+                    tabsHtml += `<button class="tab-btn" onclick="switchTab('admin', event)">Painel Admin</button><button class="tab-btn" onclick="switchTab('operadores', event)">Usuários</button><button class="tab-btn" onclick="switchTab('equipes', event)">Equipes</button><button class="tab-btn" onclick="switchTab('usuarios', event)">Supervisores</button><button class="tab-btn" onclick="switchTab('historico', event)">Histórico</button>`;
+                } else if (currentUser.cargo === 'operador' || currentUser.cargo === 'elite') {
+                    tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoEquipe', event)">Visão da Equipe</button>`;
                     tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoSetor', event)">Visão do Setor</button>`;
-
                 }
 
-                if (currentUser.cargo === 'supervisor') {
-
-                    tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoSetor', event)">Visão do Setor</button>`;
-
-                }
+                tabsHtml += `<button class="tab-btn" onclick="switchTab('detalhado', event)">Detalhado</button>`;
 
                 document.getElementById('tabsContainer').innerHTML = tabsHtml;
 
@@ -16833,6 +16837,35 @@
                 const pctDireto = totalRecebido > 0 ? (totalDireto / totalRecebido) * 100 : 0;
                 const pctExtra = totalRecebido > 0 ? (totalExtra / totalRecebido) * 100 : 0;
 
+                // Análise Detalhada por Classes dos Operadores (CRM, Digital, etc.)
+                const classesResumo = classes.map(cls => {
+                    const opsDaClasse = usuarios.filter(u => String(u.classe || '').trim().toLowerCase() === String(cls.nome || '').trim().toLowerCase() && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+                    let totCls = 0, dirCls = 0, extCls = 0, metaCls = 0;
+                    opsDaClasse.forEach(op => {
+                        const mo = metas.find(x => String(x?.usuario_id) === String(op.id) && x?.mes === mes && x?.ano === ano);
+                        if (mo) {
+                            totCls += mo.recebido || 0;
+                            dirCls += mo.direto || 0;
+                            extCls += mo.extra || 0;
+                            metaCls += mo.meta || 0;
+                        }
+                    });
+                    const pctDir = totCls > 0 ? (dirCls / totCls) * 100 : 0;
+                    const pctExt = totCls > 0 ? (extCls / totCls) * 100 : 0;
+                    const alc = metaCls > 0 ? (totCls / metaCls) * 100 : 0;
+                    return {
+                        nome: cls.nome,
+                        total: totCls,
+                        direto: dirCls,
+                        extra: extCls,
+                        meta: metaCls,
+                        pctDireto: pctDir,
+                        pctExtra: pctExt,
+                        alcance: alc,
+                        count: opsDaClasse.length
+                    };
+                }).filter(c => c.count > 0 || c.total > 0).sort((a, b) => b.total - a.total);
+
                 // Ranking de Equipes
                 const equipesRanking = equipes.map(eq => {
                     const membrosEq = usuarios.filter(u => u.equipe_id === eq.id && u.status === 'ativo');
@@ -16845,28 +16878,36 @@
                 }).sort((a, b) => b.total - a.total);
 
                 texto = [
-                    'RELATORIO EXECUTIVO - CONTROLE RECEPTIVO (SETOR GERAL)',
-                    'Data de Emissao: ' + hojeStr,
-                    'Dias Uteis: ' + diasPass + ' de ' + totalDias + ' passados (' + diasRest + ' restantes)',
+                    'RELATÓRIO EXECUTIVO - CONTROLE RECEPTIVO (SETOR GERAL)',
+                    'Data de Emissão: ' + hojeStr,
+                    'Dias Úteis: ' + diasPass + ' de ' + totalDias + ' decorridos (' + diasRest + ' restantes)',
                     '',
-                    '--- INDICADORES PRINCIPAIS ---',
+                    '--- INDICADORES PRINCIPAIS DO SETOR ---',
                     'Total Recebido: ' + formatMoney(totalRecebido),
                     'Meta do Setor: ' + formatMoney(metaSetor),
                     'Alcance da Meta: ' + alcance.toFixed(2) + '%',
-                    'Projecao de Fechamento: ' + projecao.toFixed(2) + '%',
-                    'Falta para Meta: ' + (falta === 0 ? 'META ATINGIDA' : formatMoney(falta)),
+                    'Projeção de Fechamento: ' + projecao.toFixed(2) + '%',
+                    'Falta para a Meta: ' + (falta === 0 ? 'META ATINGIDA!' : formatMoney(falta)),
                     '',
-                    '--- COMPOSICAO DE RECEBIMENTO ---',
-                    'Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)',
-                    'Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)',
+                    '--- COMPOSIÇÃO GERAL DO RECEBIMENTO ---',
+                    'Recebimento Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)',
+                    'Recebimento Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)',
                     '',
-                    '--- RITMO DA OPERACAO ---',
-                    'Media Diaria Atual: ' + formatMoney(mediaDiaria) + '/dia',
-                    'Meta Diaria Necessaria: ' + formatMoney(metaDiariaNecessaria) + '/dia',
-                    'Status: ' + (totalRecebido >= (metaSetor / Math.max(totalDias, 1) * diasPass) ? 'Acima do ritmo linear' : 'Abaixo do ritmo linear'),
+                    '--- DETALHAMENTO POR CLASSE / CANAL DE OPERADORES ---',
+                    classesResumo.map(c => 
+                        '• ' + c.nome.toUpperCase() + ' (' + c.count + ' operadores): ' + formatMoney(c.total) +
+                        ' | Direto: ' + formatMoney(c.direto) + ' (' + c.pctDireto.toFixed(1) + '%)' +
+                        ' | Extra: ' + formatMoney(c.extra) + ' (' + c.pctExtra.toFixed(1) + '%)' +
+                        (c.meta > 0 ? ' | Meta: ' + formatMoney(c.meta) + ' (' + c.alcance.toFixed(1) + '%)' : '')
+                    ).join('\n'),
+                    '',
+                    '--- RITMO DA OPERAÇÃO ---',
+                    'Média Diária Atual: ' + formatMoney(mediaDiaria) + '/dia',
+                    'Meta Diária Necessária: ' + formatMoney(metaDiariaNecessaria) + '/dia',
+                    'Status Operacional: ' + (totalRecebido >= (metaSetor / Math.max(totalDias, 1) * diasPass) ? 'Acima do ritmo linear ideal' : 'Abaixo do ritmo linear ideal'),
                     '',
                     '--- RANKING DAS EQUIPES ---',
-                    equipesRanking.map((eq, i) => (i + 1) + '. ' + eq.nome + ': ' + formatMoney(eq.total)).join('\n')
+                    equipesRanking.map((eq, i) => (i + 1) + 'º Lugar - ' + eq.nome + ': ' + formatMoney(eq.total)).join('\n')
                 ].join('\n');
 
             } else {
@@ -16897,42 +16938,58 @@
                 const metaDiariaNecessaria = diasRest > 0 ? falta / diasRest : 0;
 
                 texto = [
-                    'RELATORIO EXECUTIVO - ' + nomeEquipe.toUpperCase(),
-                    'Data de Emissao: ' + hojeStr,
-                    'Dias Uteis: ' + diasPass + ' de ' + totalDias + ' passados (' + diasRest + ' restantes)',
+                    'RELATÓRIO EXECUTIVO - EQUIPE ' + nomeEquipe.toUpperCase(),
+                    'Data de Emissão: ' + hojeStr,
+                    'Dias Úteis: ' + diasPass + ' de ' + totalDias + ' decorridos (' + diasRest + ' restantes)',
                     '',
                     '--- INDICADORES DA EQUIPE ---',
                     'Total Recebido: ' + formatMoney(totalRecebido),
                     'Meta da Equipe: ' + formatMoney(metaEquipe),
                     'Alcance da Meta: ' + alcance.toFixed(2) + '%',
-                    'Projecao de Fechamento: ' + projecao.toFixed(2) + '%',
-                    'Falta para Meta: ' + (falta === 0 ? 'META ATINGIDA' : formatMoney(falta)),
+                    'Projeção de Fechamento: ' + projecao.toFixed(2) + '%',
+                    'Falta para a Meta: ' + (falta === 0 ? 'META ATINGIDA!' : formatMoney(falta)),
                     '',
-                    '--- COMPOSICAO DA EQUIPE ---',
-                    'Direto: ' + formatMoney(totalDireto),
-                    'Extra: ' + formatMoney(totalExtra),
-                    'Media Diaria Atual: ' + formatMoney(mediaDiaria) + '/dia',
-                    'Meta Diaria Necessaria: ' + formatMoney(metaDiariaNecessaria) + '/dia',
+                    '--- COMPOSIÇÃO DA EQUIPE ---',
+                    'Recebimento Direto: ' + formatMoney(totalDireto),
+                    'Recebimento Extra: ' + formatMoney(totalExtra),
+                    'Média Diária Atual: ' + formatMoney(mediaDiaria) + '/dia',
+                    'Meta Diária Necessária: ' + formatMoney(metaDiariaNecessaria) + '/dia',
                     '',
                     '--- RANKING DOS OPERADORES ---',
-                    rankingMembros.map((m, i) => (i + 1) + '. ' + m.nome + ': ' + formatMoney(m.recebido)).join('\n')
+                    rankingMembros.map((m, i) => (i + 1) + 'º Lugar - ' + m.nome + ': ' + formatMoney(m.recebido)).join('\n')
                 ].join('\n');
             }
 
-            try {
-                await navigator.clipboard.writeText(texto);
-                showToast('Resumo executivo copiado com sucesso!');
-            } catch (err) {
-                console.error('Erro ao copiar:', err);
-                // Fallback via textarea
-                const ta = document.createElement('textarea');
-                ta.value = texto;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-                showToast('Resumo executivo copiado para a area de transferencia!');
+            let copiouComSucesso = false;
+            if (navigator.clipboard && window.isSecureContext && typeof navigator.clipboard.writeText === 'function') {
+                try {
+                    await navigator.clipboard.writeText(texto);
+                    copiouComSucesso = true;
+                } catch (e) {
+                    copiouComSucesso = false;
+                }
             }
+
+            if (!copiouComSucesso) {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = texto;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    ta.style.top = '-9999px';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    ta.setSelectionRange(0, 99999);
+                    copiouComSucesso = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                } catch (errFallback) {
+                    console.warn('Fallback copy warning:', errFallback);
+                }
+            }
+
+            showToast('Resumo executivo copiado com sucesso!');
         };
 
         window.exportarCardImagem = function (tipo) {
