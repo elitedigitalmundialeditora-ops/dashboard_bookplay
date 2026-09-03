@@ -6983,14 +6983,9 @@
             const cardsHtml = `
 
         
-            <!-- BARRA DE ACOES EXECUTIVAS -->
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                <button onclick="window.copiarResumoTexto('gestor')" class="btn" style="background: #0F3B6F; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15, 59, 111, 0.2);">
-                    Copiar Resumo (Texto)
-                </button>
-                <button onclick="window.exportarCardImagem('gestor')" class="btn" style="background: #1E6DC3; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(30, 109, 195, 0.25);">
-                    Exportar Card (Imagem PNG)
-                </button>
+            <!-- BOTAO EXPORTAR INFORMATIVO SUPERVISOR -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                <button onclick="window.abrirModalInformativo('supervisor')" class="btn" style="background: linear-gradient(135deg, #0F3B6F, #1E6DC3); color: white; border: none; padding: 10px 22px; border-radius: 12px; font-weight: 700; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 59, 111, 0.25);">Exportar Informativo</button>
             </div>
     
         <div class="supervisor-metrics-grid" style="grid-template-columns: repeat(4, 1fr);">
@@ -7668,6 +7663,10 @@
             // ====== CARDS PRINCIPAIS ======
 
             const cardsHtml = `
+<!-- BOTAO EXPORTAR INFORMATIVO GESTOR -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                <button onclick="window.abrirModalInformativo('gestor')" class="btn" style="background: linear-gradient(135deg, #0F3B6F, #1E6DC3); color: white; border: none; padding: 10px 22px; border-radius: 12px; font-weight: 700; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 59, 111, 0.25);">Exportar Informativo</button>
+            </div>
 
         <div class="supervisor-metrics-grid" style="grid-template-columns: repeat(4, 1fr);">
 
@@ -16809,7 +16808,129 @@
         // (Sem emojis, foco em tomada de decisão e apresentação de resultados)
         // =========================================================================
 
-        window.copiarResumoTexto = async function (tipo) {
+        // ============================================
+        // MODAL INTERATIVO: GERADOR DE INFORMATIVOS
+        // ============================================
+
+        // =========================================================================
+        // RECURSOS EXECUTIVOS: CENTRAL DE INFORMATIVOS PERSONALIZADA
+        // (Sem emojis, foco em tomada de decisão e flexibilidade total)
+        // =========================================================================
+
+        // =========================================================================
+        // RECURSOS EXECUTIVOS: CENTRAL DE INFORMATIVOS PERSONALIZADA
+        // (Sem emojis, foco em tomada de decisão e flexibilidade total)
+        // =========================================================================
+
+        window.abrirModalInformativo = function (tipo) {
+            const isGestor = tipo === 'gestor';
+            const modalEl = document.getElementById('editModal');
+            if (!modalEl) return;
+
+            const modalHtml = `
+            <div class="modal-overlay" style="display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(6px); z-index: 99999; padding: 20px;">
+                <div class="modal-content" style="background: white; border-radius: 20px; max-width: 820px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: 20px; font-family: 'Segoe UI', Roboto, sans-serif;">
+                    
+                    <!-- CABEÇALHO DO MODAL (SEM EMOJIS) -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #E2E8F0; padding-bottom: 16px;">
+                        <div>
+                            <h3 style="margin: 0; color: #0F3B6F; font-size: 1.4rem; font-weight: 800;">
+                                Exportar Informativo Personalizado
+                            </h3>
+                            <p style="margin: 4px 0 0 0; color: #64748B; font-size: 0.85rem;">
+                                Selecione as seções e indicadores que deseja incluir no informativo (${isGestor ? 'Setor Geral' : 'Sua Equipe'}).
+                            </p>
+                        </div>
+                        <button onclick="fecharModal()" style="background: none; border: none; font-size: 1.6rem; color: #94A3B8; cursor: pointer; padding: 4px; line-height: 1;">&times;</button>
+                    </div>
+
+                    <!-- GRID DE SELEÇÃO DE INFORMAÇÕES (SEM EMOJIS) -->
+                    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px;">
+                        <div style="font-weight: 700; color: #1E293B; font-size: 0.95rem; margin-bottom: 12px;">
+                            Opções de exportação:
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #334155; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" id="chkIndicadores" checked onchange="window.atualizarPreviewInformativo('${tipo}')" style="width: 17px; height: 17px; accent-color: #1E6DC3; cursor: pointer;">
+                                Indicadores (Total, Meta, Projeção)
+                            </label>
+
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #334155; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" id="chkComposicao" checked onchange="window.atualizarPreviewInformativo('${tipo}')" style="width: 17px; height: 17px; accent-color: #1E6DC3; cursor: pointer;">
+                                Recebimento Direto vs Extra
+                            </label>
+
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #334155; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" id="chkRitmo" checked onchange="window.atualizarPreviewInformativo('${tipo}')" style="width: 17px; height: 17px; accent-color: #1E6DC3; cursor: pointer;">
+                                Ritmo da Operação e Dias Úteis
+                            </label>
+
+                            ${isGestor ? `
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #334155; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" id="chkClasses" checked onchange="window.atualizarPreviewInformativo('${tipo}')" style="width: 17px; height: 17px; accent-color: #1E6DC3; cursor: pointer;">
+                                Detalhamento por Classes (CRM, Digital)
+                            </label>
+
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #334155; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" id="chkEquipes" checked onchange="window.atualizarPreviewInformativo('${tipo}')" style="width: 17px; height: 17px; accent-color: #1E6DC3; cursor: pointer;">
+                                Ranking das Equipes
+                            </label>
+                            ` : ''}
+
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #334155; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" id="chkOperadores" checked onchange="window.atualizarPreviewInformativo('${tipo}')" style="width: 17px; height: 17px; accent-color: #1E6DC3; cursor: pointer;">
+                                ${isGestor ? 'Top Operadores do Setor' : 'Ranking dos Operadores'}
+                            </label>
+                        </div>
+
+                        <!-- FILTRO DE QUANTIDADE DO RANKING -->
+                        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="font-size: 0.85rem; font-weight: 600; color: #475569;">Exibir no ranking:</span>
+                            <select id="selQtdRanking" onchange="window.atualizarPreviewInformativo('${tipo}')" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #CBD5E1; font-size: 0.85rem; color: #1E293B; background: white; font-weight: 600; cursor: pointer;">
+                                <option value="3">Top 3</option>
+                                <option value="5" selected>Top 5 (Padrão)</option>
+                                <option value="10">Top 10</option>
+                                <option value="todos">Todos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- PRÉ-VISUALIZAÇÃO EM TEMPO REAL -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 700; color: #1E293B; font-size: 0.9rem;">Pré-visualização do Informativo:</span>
+                            <span style="font-size: 0.75rem; color: #64748B;">Atualiza automaticamente ao alterar as opções</span>
+                        </div>
+                        <pre id="previewInformativoText" style="background: #0F172A; color: #F1F5F9; padding: 16px; border-radius: 12px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.8rem; line-height: 1.5; max-height: 220px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #334155;"></pre>
+                    </div>
+
+                    <!-- BOTÕES DE AÇÃO INFERIORES (SEM EMOJIS) -->
+                    <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #E2E8F0; padding-top: 16px; flex-wrap: wrap;">
+                        <button onclick="fecharModal()" class="btn" style="background: #E2E8F0; color: #475569; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                            Cancelar
+                        </button>
+                        <button onclick="window.copiarInformativoPersonalizado('${tipo}')" class="btn" style="background: #0F3B6F; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 6px rgba(15, 59, 111, 0.2);">
+                            Copiar Informativo
+                        </button>
+                        <button onclick="window.baixarInformativoPersonalizado('${tipo}')" class="btn" style="background: #1E6DC3; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 6px rgba(30, 109, 195, 0.25);">
+                            Baixar Informativo
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+            `;
+
+            modalEl.innerHTML = modalHtml;
+            modalEl.style.display = 'block';
+
+            // Atualiza preview inicial
+            window.atualizarPreviewInformativo(tipo);
+        };
+
+        // GERA O TEXTO DO INFORMATIVO DINAMICAMENTE CONFORME AS OPÇÕES
+        window.gerarTextoInformativoDinamico = function (tipo) {
+            const isGestor = tipo === 'gestor';
             const mes = new Date().getMonth() + 1;
             const ano = new Date().getFullYear();
             const hojeStr = new Date().toLocaleDateString('pt-BR');
@@ -16817,9 +16938,17 @@
             const diasPass = getDiasPassados();
             const diasRest = getDiasRestantes();
 
-            let texto = '';
+            const chkIndicadores = document.getElementById('chkIndicadores')?.checked ?? true;
+            const chkComposicao = document.getElementById('chkComposicao')?.checked ?? true;
+            const chkRitmo = document.getElementById('chkRitmo')?.checked ?? true;
+            const chkClasses = document.getElementById('chkClasses')?.checked ?? true;
+            const chkEquipes = document.getElementById('chkEquipes')?.checked ?? true;
+            const chkOperadores = document.getElementById('chkOperadores')?.checked ?? true;
+            const qtdRankingVal = document.getElementById('selQtdRanking')?.value || '5';
 
-            if (tipo === 'gestor') {
+            let textoPartes = [];
+
+            if (isGestor) {
                 const metaSetor = getMetaSetor();
                 const usuariosAtivos = usuarios.filter(u => u.status === 'ativo');
                 let totalRecebido = 0, totalDireto = 0, totalExtra = 0;
@@ -16841,81 +16970,114 @@
                 const pctDireto = totalRecebido > 0 ? (totalDireto / totalRecebido) * 100 : 0;
                 const pctExtra = totalRecebido > 0 ? (totalExtra / totalRecebido) * 100 : 0;
 
-                // Análise Detalhada por Classes dos Operadores (CRM, Digital, etc.)
-                const classesResumo = classes.map(cls => {
-                    const opsDaClasse = usuarios.filter(u => String(u.classe || '').trim().toLowerCase() === String(cls.nome || '').trim().toLowerCase() && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
-                    let totCls = 0, dirCls = 0, extCls = 0, metaCls = 0;
-                    opsDaClasse.forEach(op => {
-                        const mo = metas.find(x => String(x?.usuario_id) === String(op.id) && x?.mes === mes && x?.ano === ano);
-                        if (mo) {
-                            totCls += mo.recebido || 0;
-                            dirCls += mo.direto || 0;
-                            extCls += mo.extra || 0;
-                            metaCls += mo.meta || 0;
-                        }
-                    });
-                    const pctDir = totCls > 0 ? (dirCls / totCls) * 100 : 0;
-                    const pctExt = totCls > 0 ? (extCls / totCls) * 100 : 0;
-                    const alc = metaCls > 0 ? (totCls / metaCls) * 100 : 0;
-                    return {
-                        nome: cls.nome,
-                        total: totCls,
-                        direto: dirCls,
-                        extra: extCls,
-                        meta: metaCls,
-                        pctDireto: pctDir,
-                        pctExtra: pctExt,
-                        alcance: alc,
-                        count: opsDaClasse.length
-                    };
-                }).filter(c => c.count > 0 || c.total > 0).sort((a, b) => b.total - a.total);
+                textoPartes.push('RELATÓRIO EXECUTIVO - CONTROLE RECEPTIVO (SETOR GERAL)');
+                textoPartes.push('Data de Emissão: ' + hojeStr);
+                textoPartes.push('Dias Úteis: ' + diasPass + ' de ' + totalDias + ' decorridos (' + diasRest + ' restantes)\n');
 
-                // Ranking de Equipes
-                const equipesRanking = equipes.map(eq => {
-                    const membrosEq = usuarios.filter(u => u.equipe_id === eq.id && u.status === 'ativo');
-                    let totEq = 0;
-                    membrosEq.forEach(m => {
-                        const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
-                        if (mo) totEq += mo.recebido || 0;
-                    });
-                    return { nome: eq.nome, total: totEq };
-                }).sort((a, b) => b.total - a.total);
+                if (chkIndicadores) {
+                    textoPartes.push('--- INDICADORES PRINCIPAIS DO SETOR ---');
+                    textoPartes.push('Total Recebido: ' + formatMoney(totalRecebido));
+                    textoPartes.push('Meta do Setor: ' + formatMoney(metaSetor));
+                    textoPartes.push('Alcance da Meta: ' + alcance.toFixed(2) + '%');
+                    textoPartes.push('Projeção de Fechamento: ' + projecao.toFixed(2) + '%');
+                    textoPartes.push('Falta para a Meta: ' + (falta === 0 ? 'META ATINGIDA!' : formatMoney(falta)) + '\n');
+                }
 
-                texto = [
-                    'RELATÓRIO EXECUTIVO - CONTROLE RECEPTIVO (SETOR GERAL)',
-                    'Data de Emissão: ' + hojeStr,
-                    'Dias Úteis: ' + diasPass + ' de ' + totalDias + ' decorridos (' + diasRest + ' restantes)',
-                    '',
-                    '--- INDICADORES PRINCIPAIS DO SETOR ---',
-                    'Total Recebido: ' + formatMoney(totalRecebido),
-                    'Meta do Setor: ' + formatMoney(metaSetor),
-                    'Alcance da Meta: ' + alcance.toFixed(2) + '%',
-                    'Projeção de Fechamento: ' + projecao.toFixed(2) + '%',
-                    'Falta para a Meta: ' + (falta === 0 ? 'META ATINGIDA!' : formatMoney(falta)),
-                    '',
-                    '--- COMPOSIÇÃO GERAL DO RECEBIMENTO ---',
-                    'Recebimento Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)',
-                    'Recebimento Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)',
-                    '',
-                    '--- DETALHAMENTO POR CLASSE / CANAL DE OPERADORES ---',
-                    classesResumo.map(c => 
-                        '• ' + c.nome.toUpperCase() + ' (' + c.count + ' operadores): ' + formatMoney(c.total) +
-                        ' | Direto: ' + formatMoney(c.direto) + ' (' + c.pctDireto.toFixed(1) + '%)' +
-                        ' | Extra: ' + formatMoney(c.extra) + ' (' + c.pctExtra.toFixed(1) + '%)' +
-                        (c.meta > 0 ? ' | Meta: ' + formatMoney(c.meta) + ' (' + c.alcance.toFixed(1) + '%)' : '')
-                    ).join('\n'),
-                    '',
-                    '--- RITMO DA OPERAÇÃO ---',
-                    'Média Diária Atual: ' + formatMoney(mediaDiaria) + '/dia',
-                    'Meta Diária Necessária: ' + formatMoney(metaDiariaNecessaria) + '/dia',
-                    'Status Operacional: ' + (totalRecebido >= (metaSetor / Math.max(totalDias, 1) * diasPass) ? 'Acima do ritmo linear ideal' : 'Abaixo do ritmo linear ideal'),
-                    '',
-                    '--- RANKING DAS EQUIPES ---',
-                    equipesRanking.map((eq, i) => (i + 1) + 'º Lugar - ' + eq.nome + ': ' + formatMoney(eq.total)).join('\n')
-                ].join('\n');
+                if (chkComposicao) {
+                    textoPartes.push('--- COMPOSIÇÃO GERAL DO RECEBIMENTO ---');
+                    textoPartes.push('Recebimento Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)');
+                    textoPartes.push('Recebimento Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)\n');
+                }
+
+                if (chkClasses) {
+                    const classesResumo = classes.map(cls => {
+                        const opsDaClasse = usuarios.filter(u => String(u.classe || '').trim().toLowerCase() === String(cls.nome || '').trim().toLowerCase() && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+                        let totCls = 0, dirCls = 0, extCls = 0, metaCls = 0;
+                        opsDaClasse.forEach(op => {
+                            const mo = metas.find(x => String(x?.usuario_id) === String(op.id) && x?.mes === mes && x?.ano === ano);
+                            if (mo) {
+                                totCls += mo.recebido || 0;
+                                dirCls += mo.direto || 0;
+                                extCls += mo.extra || 0;
+                                metaCls += mo.meta || 0;
+                            }
+                        });
+                        const pctDir = totCls > 0 ? (dirCls / totCls) * 100 : 0;
+                        const pctExt = totCls > 0 ? (extCls / totCls) * 100 : 0;
+                        const alc = metaCls > 0 ? (totCls / metaCls) * 100 : 0;
+                        return {
+                            nome: cls.nome,
+                            total: totCls,
+                            direto: dirCls,
+                            extra: extCls,
+                            meta: metaCls,
+                            pctDireto: pctDir,
+                            pctExtra: pctExt,
+                            alcance: alc,
+                            count: opsDaClasse.length
+                        };
+                    }).filter(c => c.count > 0 || c.total > 0).sort((a, b) => b.total - a.total);
+
+                    textoPartes.push('--- DETALHAMENTO POR CLASSE / CANAL DE OPERADORES ---');
+                    classesResumo.forEach(c => {
+                        textoPartes.push('• ' + c.nome.toUpperCase() + ' (' + c.count + ' operadores): ' + formatMoney(c.total) +
+                            ' | Direto: ' + formatMoney(c.direto) + ' (' + c.pctDireto.toFixed(1) + '%)' +
+                            ' | Extra: ' + formatMoney(c.extra) + ' (' + c.pctExtra.toFixed(1) + '%)' +
+                            (c.meta > 0 ? ' | Meta: ' + formatMoney(c.meta) + ' (' + c.alcance.toFixed(1) + '%)' : '')
+                        );
+                    });
+                    textoPartes.push('');
+                }
+
+                if (chkEquipes) {
+                    let equipesRanking = equipes.map(eq => {
+                        const membrosEq = usuarios.filter(u => u.equipe_id === eq.id && u.status === 'ativo');
+                        let totEq = 0;
+                        membrosEq.forEach(m => {
+                            const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
+                            if (mo) totEq += mo.recebido || 0;
+                        });
+                        return { nome: eq.nome, total: totEq };
+                    }).sort((a, b) => b.total - a.total);
+
+                    if (qtdRankingVal !== 'todos') {
+                        equipesRanking = equipesRanking.slice(0, parseInt(qtdRankingVal, 10));
+                    }
+
+                    textoPartes.push('--- RANKING DAS EQUIPES DO SETOR ---');
+                    equipesRanking.forEach((eq, i) => {
+                        textoPartes.push((i + 1) + 'º Lugar - ' + eq.nome + ': ' + formatMoney(eq.total));
+                    });
+                    textoPartes.push('');
+                }
+
+                if (chkOperadores) {
+                    let operadoresTopSetor = usuarios.filter(u => (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo').map(op => {
+                        const mo = metas.find(x => x?.usuario_id === op.id && x?.mes === mes && x?.ano === ano);
+                        const eq = equipes.find(e => e.id === op.equipe_id);
+                        return { nome: op.nome, equipe: eq ? eq.nome : 'Sem equipe', total: mo?.recebido || 0 };
+                    }).sort((a, b) => b.total - a.total);
+
+                    if (qtdRankingVal !== 'todos') {
+                        operadoresTopSetor = operadoresTopSetor.slice(0, parseInt(qtdRankingVal, 10));
+                    }
+
+                    textoPartes.push('--- TOP OPERADORES DO SETOR GERAL ---');
+                    operadoresTopSetor.forEach((op, i) => {
+                        textoPartes.push((i + 1) + 'º Lugar - ' + op.nome + ' (' + op.equipe + '): ' + formatMoney(op.total));
+                    });
+                    textoPartes.push('');
+                }
+
+                if (chkRitmo) {
+                    textoPartes.push('--- RITMO DA OPERAÇÃO ---');
+                    textoPartes.push('Média Diária Atual: ' + formatMoney(mediaDiaria) + '/dia');
+                    textoPartes.push('Meta Diária Necessária: ' + formatMoney(metaDiariaNecessaria) + '/dia');
+                    textoPartes.push('Status Operacional: ' + (totalRecebido >= (metaSetor / Math.max(totalDias, 1) * diasPass) ? 'Acima do ritmo linear ideal' : 'Abaixo do ritmo linear ideal'));
+                }
 
             } else {
-                // Tipo Supervisor / Equipe
+                // Tipo Supervisor
                 const supervisorEquipe = equipes.find(e => e.id === currentUser?.equipe_id);
                 const nomeEquipe = supervisorEquipe ? supervisorEquipe.nome : 'Sua Equipe';
                 const metaEqObj = metasEquipe.find(me => me?.equipe_id === supervisorEquipe?.id && me?.mes === mes && me?.ano === ano);
@@ -16923,7 +17085,7 @@
 
                 const membros = usuarios.filter(u => u.equipe_id === supervisorEquipe?.id && u.status === 'ativo');
                 let totalRecebido = 0, totalDireto = 0, totalExtra = 0;
-                const rankingMembros = [];
+                let rankingMembros = [];
 
                 for (const m of membros) {
                     const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
@@ -16935,46 +17097,77 @@
                 }
 
                 rankingMembros.sort((a, b) => b.recebido - a.recebido);
+
+                if (qtdRankingVal !== 'todos') {
+                    rankingMembros = rankingMembros.slice(0, parseInt(qtdRankingVal, 10));
+                }
+
                 const alcance = metaEquipe > 0 ? (totalRecebido / metaEquipe) * 100 : 0;
                 const projecao = calcularProjecao(metaEquipe, totalRecebido);
                 const falta = Math.max(0, metaEquipe - totalRecebido);
                 const mediaDiaria = diasPass > 0 ? totalRecebido / diasPass : 0;
                 const metaDiariaNecessaria = diasRest > 0 ? falta / diasRest : 0;
 
-                texto = [
-                    'RELATÓRIO EXECUTIVO - EQUIPE ' + nomeEquipe.toUpperCase(),
-                    'Data de Emissão: ' + hojeStr,
-                    'Dias Úteis: ' + diasPass + ' de ' + totalDias + ' decorridos (' + diasRest + ' restantes)',
-                    '',
-                    '--- INDICADORES DA EQUIPE ---',
-                    'Total Recebido: ' + formatMoney(totalRecebido),
-                    'Meta da Equipe: ' + formatMoney(metaEquipe),
-                    'Alcance da Meta: ' + alcance.toFixed(2) + '%',
-                    'Projeção de Fechamento: ' + projecao.toFixed(2) + '%',
-                    'Falta para a Meta: ' + (falta === 0 ? 'META ATINGIDA!' : formatMoney(falta)),
-                    '',
-                    '--- COMPOSIÇÃO DA EQUIPE ---',
-                    'Recebimento Direto: ' + formatMoney(totalDireto),
-                    'Recebimento Extra: ' + formatMoney(totalExtra),
-                    'Média Diária Atual: ' + formatMoney(mediaDiaria) + '/dia',
-                    'Meta Diária Necessária: ' + formatMoney(metaDiariaNecessaria) + '/dia',
-                    '',
-                    '--- RANKING DOS OPERADORES ---',
-                    rankingMembros.map((m, i) => (i + 1) + 'º Lugar - ' + m.nome + ': ' + formatMoney(m.recebido)).join('\n')
-                ].join('\n');
-            }
+                textoPartes.push('RELATÓRIO EXECUTIVO - EQUIPE ' + nomeEquipe.toUpperCase());
+                textoPartes.push('Data de Emissão: ' + hojeStr);
+                textoPartes.push('Dias Úteis: ' + diasPass + ' de ' + totalDias + ' decorridos (' + diasRest + ' restantes)\n');
 
-            let copiouComSucesso = false;
-            if (navigator.clipboard && window.isSecureContext && typeof navigator.clipboard.writeText === 'function') {
-                try {
-                    await navigator.clipboard.writeText(texto);
-                    copiouComSucesso = true;
-                } catch (e) {
-                    copiouComSucesso = false;
+                if (chkIndicadores) {
+                    textoPartes.push('--- INDICADORES DA EQUIPE ---');
+                    textoPartes.push('Total Recebido: ' + formatMoney(totalRecebido));
+                    textoPartes.push('Meta da Equipe: ' + formatMoney(metaEquipe));
+                    textoPartes.push('Alcance da Meta: ' + alcance.toFixed(2) + '%');
+                    textoPartes.push('Projeção de Fechamento: ' + projecao.toFixed(2) + '%');
+                    textoPartes.push('Falta para a Meta: ' + (falta === 0 ? 'META ATINGIDA!' : formatMoney(falta)) + '\n');
+                }
+
+                if (chkComposicao) {
+                    textoPartes.push('--- COMPOSIÇÃO DA EQUIPE ---');
+                    textoPartes.push('Recebimento Direto: ' + formatMoney(totalDireto));
+                    textoPartes.push('Recebimento Extra: ' + formatMoney(totalExtra) + '\n');
+                }
+
+                if (chkOperadores) {
+                    textoPartes.push('--- RANKING DOS OPERADORES DA EQUIPE ---');
+                    rankingMembros.forEach((m, i) => {
+                        textoPartes.push((i + 1) + 'º Lugar - ' + m.nome + ': ' + formatMoney(m.recebido));
+                    });
+                    textoPartes.push('');
+                }
+
+                if (chkRitmo) {
+                    textoPartes.push('--- RITMO DA EQUIPE ---');
+                    textoPartes.push('Média Diária Atual: ' + formatMoney(mediaDiaria) + '/dia');
+                    textoPartes.push('Meta Diária Necessária: ' + formatMoney(metaDiariaNecessaria) + '/dia');
                 }
             }
 
-            if (!copiouComSucesso) {
+            return textoPartes.join('\n');
+        };
+
+        // ATUALIZA A PRÉ-VISUALIZAÇÃO NO MODAL
+        window.atualizarPreviewInformativo = function (tipo) {
+            const previewEl = document.getElementById('previewInformativoText');
+            if (previewEl) {
+                previewEl.textContent = window.gerarTextoInformativoDinamico(tipo);
+            }
+        };
+
+        // COPIAR INFORMATIVO PERSONALIZADO
+        window.copiarInformativoPersonalizado = async function (tipo) {
+            const texto = window.gerarTextoInformativoDinamico(tipo);
+            let copiou = false;
+
+            if (navigator.clipboard && window.isSecureContext && typeof navigator.clipboard.writeText === 'function') {
+                try {
+                    await navigator.clipboard.writeText(texto);
+                    copiou = true;
+                } catch (e) {
+                    copiou = false;
+                }
+            }
+
+            if (!copiou) {
                 try {
                     const ta = document.createElement('textarea');
                     ta.value = texto;
@@ -16986,23 +17179,34 @@
                     ta.focus();
                     ta.select();
                     ta.setSelectionRange(0, 99999);
-                    copiouComSucesso = document.execCommand('copy');
+                    copiou = document.execCommand('copy');
                     document.body.removeChild(ta);
                 } catch (errFallback) {
-                    console.warn('Fallback copy warning:', errFallback);
+                    console.warn('Fallback copy error:', errFallback);
                 }
             }
 
-            showToast('Resumo executivo copiado com sucesso!');
+            showToast('Informativo copiado com sucesso!');
         };
 
-        window.exportarCardImagem = function (tipo) {
+        // BAIXAR INFORMATIVO PERSONALIZADO (IMAGEM PNG DINÂMICA)
+        window.baixarInformativoPersonalizado = function (tipo) {
+            const isGestor = tipo === 'gestor';
             const mes = new Date().getMonth() + 1;
             const ano = new Date().getFullYear();
             const hojeStr = new Date().toLocaleDateString('pt-BR');
             const totalDias = getDiasUteis();
             const diasPass = getDiasPassados();
             const diasRest = getDiasRestantes();
+
+            const chkIndicadores = document.getElementById('chkIndicadores')?.checked ?? true;
+            const chkComposicao = document.getElementById('chkComposicao')?.checked ?? true;
+            const chkRitmo = document.getElementById('chkRitmo')?.checked ?? true;
+            const chkClasses = document.getElementById('chkClasses')?.checked ?? true;
+            const chkEquipes = document.getElementById('chkEquipes')?.checked ?? true;
+            const chkOperadores = document.getElementById('chkOperadores')?.checked ?? true;
+            const qtdRankingVal = document.getElementById('selQtdRanking')?.value || '5';
+            const limitRank = qtdRankingVal === 'todos' ? 10 : parseInt(qtdRankingVal, 10);
 
             let titulo = '';
             let subtitulo = '';
@@ -17011,9 +17215,10 @@
             let totalDireto = 0;
             let totalExtra = 0;
             let ranking = [];
+            let classesResumo = [];
 
-            if (tipo === 'gestor') {
-                titulo = 'RELATORIO EXECUTIVO - CONTROLE RECEPTIVO';
+            if (isGestor) {
+                titulo = 'RELATÓRIO EXECUTIVO - CONTROLE RECEPTIVO';
                 subtitulo = 'Desempenho Geral do Setor';
                 metaValor = getMetaSetor();
                 const usuariosAtivos = usuarios.filter(u => u.status === 'ativo');
@@ -17027,32 +17232,68 @@
                     }
                 }
 
-                ranking = equipes.map(eq => {
-                    let tot = 0;
-                    usuarios.filter(u => u.equipe_id === eq.id && u.status === 'ativo').forEach(m => {
-                        const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
-                        if (mo) tot += mo.recebido || 0;
-                    });
-                    return { label: eq.nome, valor: tot };
-                }).sort((a, b) => b.valor - a.valor).slice(0, 4);
+                if (chkClasses) {
+                    classesResumo = classes.map(cls => {
+                        const opsDaClasse = usuarios.filter(u => String(u.classe || '').trim().toLowerCase() === String(cls.nome || '').trim().toLowerCase() && (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo');
+                        let totCls = 0, dirCls = 0, extCls = 0;
+                        opsDaClasse.forEach(op => {
+                            const mo = metas.find(x => String(x?.usuario_id) === String(op.id) && x?.mes === mes && x?.ano === ano);
+                            if (mo) {
+                                totCls += mo.recebido || 0;
+                                dirCls += mo.direto || 0;
+                                extCls += mo.extra || 0;
+                            }
+                        });
+                        return {
+                            nome: cls.nome,
+                            total: totCls,
+                            direto: dirCls,
+                            extra: extCls,
+                            count: opsDaClasse.length
+                        };
+                    }).filter(c => c.count > 0 || c.total > 0).sort((a, b) => b.total - a.total);
+                }
+
+                if (chkEquipes) {
+                    let equipesList = equipes.map(eq => {
+                        let tot = 0;
+                        usuarios.filter(u => u.equipe_id === eq.id && u.status === 'ativo').forEach(m => {
+                            const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
+                            if (mo) tot += mo.recebido || 0;
+                        });
+                        return { label: eq.nome, valor: tot };
+                    }).sort((a, b) => b.valor - a.valor);
+
+                    ranking = equipesList.slice(0, limitRank);
+                } else if (chkOperadores) {
+                    let opList = usuarios.filter(u => (u.cargo === 'operador' || u.cargo === 'elite') && u.status === 'ativo').map(op => {
+                        const mo = metas.find(x => x?.usuario_id === op.id && x?.mes === mes && x?.ano === ano);
+                        return { label: op.nome, valor: mo?.recebido || 0 };
+                    }).sort((a, b) => b.valor - a.valor);
+
+                    ranking = opList.slice(0, limitRank);
+                }
 
             } else {
                 const supervisorEquipe = equipes.find(e => e.id === currentUser?.equipe_id);
-                titulo = 'RELATORIO EXECUTIVO - ' + (supervisorEquipe ? supervisorEquipe.nome.toUpperCase() : 'EQUIPE');
+                titulo = 'RELATÓRIO EXECUTIVO - ' + (supervisorEquipe ? supervisorEquipe.nome.toUpperCase() : 'EQUIPE');
                 subtitulo = 'Acompanhamento de Resultados da Equipe';
                 const metaEqObj = metasEquipe.find(me => me?.equipe_id === supervisorEquipe?.id && me?.mes === mes && me?.ano === ano);
                 metaValor = metaEqObj?.meta || 100000;
 
                 const membros = usuarios.filter(u => u.equipe_id === supervisorEquipe?.id && u.status === 'ativo');
+                let rankingMembros = [];
                 for (const m of membros) {
                     const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
                     const rec = mo?.recebido || 0;
                     totalRecebido += rec;
                     totalDireto += mo?.direto || 0;
                     totalExtra += mo?.extra || 0;
-                    ranking.push({ label: m.nome, valor: rec });
+                    if (chkOperadores) {
+                        rankingMembros.push({ label: m.nome, valor: rec });
+                    }
                 }
-                ranking.sort((a, b) => b.valor - a.valor).slice(0, 4);
+                ranking = rankingMembros.sort((a, b) => b.valor - a.valor).slice(0, limitRank);
             }
 
             const alcance = metaValor > 0 ? (totalRecebido / metaValor) * 100 : 0;
@@ -17063,195 +17304,288 @@
             const pctDireto = totalRecebido > 0 ? (totalDireto / totalRecebido) * 100 : 0;
             const pctExtra = totalRecebido > 0 ? (totalExtra / totalRecebido) * 100 : 0;
 
-            // Criar canvas 1200x675 (proporção 16:9 HD de apresentação)
             const canvas = document.createElement('canvas');
-            canvas.width = 1200;
-            canvas.height = 675;
+            canvas.width = 1280;
+            canvas.height = 720;
             const ctx = canvas.getContext('2d');
 
-            // 1. Fundo Gradiente Elegante Escuro
-            const gradBg = ctx.createLinearGradient(0, 0, 1200, 675);
-            gradBg.addColorStop(0, '#07162C');
-            gradBg.addColorStop(0.5, '#0B2347');
-            gradBg.addColorStop(1, '#0F3B6F');
+            // Fundo Gradiente Executivo
+            const gradBg = ctx.createLinearGradient(0, 0, 1280, 720);
+            gradBg.addColorStop(0, '#06152B');
+            gradBg.addColorStop(0.5, '#0A2244');
+            gradBg.addColorStop(1, '#0E3666');
             ctx.fillStyle = gradBg;
-            ctx.fillRect(0, 0, 1200, 675);
+            ctx.fillRect(0, 0, 1280, 720);
 
-            // Detalhes decorativos sutis
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            // Linha divisória superior
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(40, 110);
-            ctx.lineTo(1160, 110);
+            ctx.moveTo(40, 95);
+            ctx.lineTo(1240, 95);
             ctx.stroke();
 
-            // 2. Cabeçalho
+            // Cabeçalho (Sem emojis)
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = '800 28px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(titulo, 40, 58);
+            ctx.font = '800 26px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(titulo, 45, 50);
 
             ctx.fillStyle = '#93C5FD';
-            ctx.font = '600 15px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(subtitulo + ' | Data: ' + hojeStr + ' | Dia Util: ' + diasPass + ' de ' + totalDias, 40, 88);
+            ctx.font = '600 14px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(subtitulo + ' | Data: ' + hojeStr + ' | Dias Úteis: ' + diasPass + ' de ' + totalDias + ' (' + diasRest + ' restantes)', 45, 78);
 
-            // Badge de status no topo direito
-            const badgeText = projecao >= 100 ? 'PROJECAO POSITIVA' : 'RITMO DE ATENCAO';
+            function drawCard(x, y, w, h, r, bg, strokeColor) {
+                ctx.fillStyle = bg;
+                ctx.beginPath();
+                if (typeof ctx.roundRect === 'function') {
+                    ctx.roundRect(x, y, w, h, r);
+                } else {
+                    ctx.moveTo(x + r, y);
+                    ctx.lineTo(x + w - r, y);
+                    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                    ctx.lineTo(x + w, y + h - r);
+                    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                    ctx.lineTo(x + r, y + h);
+                    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                    ctx.lineTo(x, y + r);
+                    ctx.quadraticCurveTo(x, y, x + r, y);
+                    ctx.closePath();
+                }
+                ctx.fill();
+                if (strokeColor) {
+                    ctx.strokeStyle = strokeColor;
+                    ctx.stroke();
+                }
+            }
+
+            // Badge de status
+            const badgeText = projecao >= 100 ? 'PROJEÇÃO POSITIVA' : 'RITMO DE ATENÇÃO';
             const badgeBg = projecao >= 100 ? '#10B981' : '#F59E0B';
-            ctx.fillStyle = badgeBg;
-            ctx.beginPath();
-            ctx.roundRect(980, 42, 180, 36, 18);
-            ctx.fill();
+            drawCard(1045, 34, 190, 38, 19, badgeBg, null);
             ctx.fillStyle = '#FFFFFF';
             ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(badgeText, 1070, 65);
+            ctx.fillText(badgeText, 1140, 58);
             ctx.textAlign = 'left';
 
-            // Função auxiliar para desenhar cards arredondados
-            function drawCard(x, y, w, h, bg) {
-                ctx.fillStyle = bg;
-                ctx.beginPath();
-                ctx.roundRect(x, y, w, h, 14);
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-                ctx.stroke();
+            // Layout Dinâmico
+            let contentStartY = 115;
+            let bottomBoxH = 370;
+
+            if (chkIndicadores) {
+                // Renderiza os 4 Cards Principais
+                const cardW = 285, cardH = 135;
+
+                // Total Recebido
+                drawCard(45, contentStartY, cardW, cardH, 14, 'rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.12)');
+                ctx.fillStyle = '#94A3B8';
+                ctx.font = '700 12px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(isGestor ? 'TOTAL RECEBIDO DO SETOR' : 'TOTAL RECEBIDO DA EQUIPE', 65, contentStartY + 32);
+                ctx.fillStyle = '#34D399';
+                ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(formatMoney(totalRecebido), 65, contentStartY + 70);
+                ctx.fillStyle = '#E2E8F0';
+                ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(alcance.toFixed(1) + '% da meta atingida', 65, contentStartY + 106);
+
+                // Meta Planejada
+                drawCard(350, contentStartY, cardW, cardH, 14, 'rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.12)');
+                ctx.fillStyle = '#94A3B8';
+                ctx.font = '700 12px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(isGestor ? 'META DO SETOR' : 'META DA EQUIPE', 370, contentStartY + 32);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(formatMoney(metaValor), 370, contentStartY + 70);
+                ctx.fillStyle = '#F87171';
+                ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(falta === 0 ? 'Meta superada!' : 'Falta: ' + formatMoney(falta), 370, contentStartY + 106);
+
+                // Projeção
+                drawCard(655, contentStartY, cardW, cardH, 14, 'rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.12)');
+                ctx.fillStyle = '#94A3B8';
+                ctx.font = '700 12px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText('PROJEÇÃO DE FECHAMENTO', 675, contentStartY + 32);
+                ctx.fillStyle = projecao >= 100 ? '#38BDF8' : '#FBBF24';
+                ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(projecao.toFixed(1) + '%', 675, contentStartY + 70);
+                ctx.fillStyle = '#E2E8F0';
+                ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(projecao >= 100 ? 'No ritmo projetado' : 'Abaixo do ritmo linear', 675, contentStartY + 106);
+
+                // Ritmo Diário
+                drawCard(960, contentStartY, cardW, cardH, 14, 'rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.12)');
+                ctx.fillStyle = '#94A3B8';
+                ctx.font = '700 12px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText('RITMO DIÁRIO', 980, contentStartY + 32);
+                ctx.fillStyle = '#60A5FA';
+                ctx.font = '800 22px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(formatMoney(mediaDiaria) + '/dia', 980, contentStartY + 70);
+                ctx.fillStyle = '#F59E0B';
+                ctx.font = '600 12px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText('Necessário: ' + formatMoney(metaDiariaNecessaria) + '/dia', 980, contentStartY + 106);
+
+                contentStartY = 275;
+                bottomBoxH = 390;
+            } else {
+                contentStartY = 115;
+                bottomBoxH = 550;
             }
 
-            // 3. Grid de 4 Cards Principais de Métricas
-            const cardW = 265;
-            const cardH = 150;
-            const startY = 135;
+            // Determina se os blocos esquerdo e direito estão ativos
+            const hasLeftBlock = chkComposicao || (isGestor && chkClasses) || chkRitmo;
+            const hasRightBlock = ((isGestor && (chkEquipes || chkOperadores)) || (!isGestor && chkOperadores)) && ranking.length > 0;
 
-            // Card 1: Total Recebido
-            drawCard(40, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
-            ctx.fillStyle = '#94A3B8';
-            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('TOTAL RECEBIDO', 60, startY + 35);
-            ctx.fillStyle = '#34D399';
-            ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(formatMoney(totalRecebido), 60, startY + 75);
-            ctx.fillStyle = '#E2E8F0';
-            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(alcance.toFixed(1) + '% da meta atingida', 60, startY + 115);
+            if (hasLeftBlock && hasRightBlock) {
+                // Layout 2 Colunas
+                renderLeftBlock(45, contentStartY, 585, bottomBoxH);
+                renderRightBlock(650, contentStartY, 585, bottomBoxH);
+            } else if (hasLeftBlock && !hasRightBlock) {
+                // Layout 1 Coluna Larga (Esquerda)
+                renderLeftBlock(45, contentStartY, 1190, bottomBoxH);
+            } else if (!hasLeftBlock && hasRightBlock) {
+                // Layout 1 Coluna Larga (Direita)
+                renderRightBlock(45, contentStartY, 1190, bottomBoxH);
+            }
 
-            // Card 2: Meta Planejada
-            drawCard(325, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
-            ctx.fillStyle = '#94A3B8';
-            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('META PLANEJADA', 345, startY + 35);
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(formatMoney(metaValor), 345, startY + 75);
-            ctx.fillStyle = '#F87171';
-            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(falta === 0 ? 'Meta atingida' : 'Falta: ' + formatMoney(falta), 345, startY + 115);
+            function renderLeftBlock(bx, by, bw, bh) {
+                drawCard(bx, by, bw, bh, 14, 'rgba(255, 255, 255, 0.04)', 'rgba(255, 255, 255, 0.12)');
+                let innerY = by + 35;
 
-            // Card 3: Projeção de Fechamento
-            drawCard(610, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
-            ctx.fillStyle = '#94A3B8';
-            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('PROJECAO FECHAMENTO', 630, startY + 35);
-            ctx.fillStyle = projecao >= 100 ? '#38BDF8' : '#FBBF24';
-            ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(projecao.toFixed(1) + '%', 630, startY + 75);
-            ctx.fillStyle = '#E2E8F0';
-            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(projecao >= 100 ? 'No ritmo projetado' : 'Abaixo da meta', 630, startY + 115);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '700 16px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(isGestor ? 'RAIO-X DE COMPOSIÇÃO: DIRETO VS EXTRA' : 'RAIO-X DA EQUIPE: DIRETO VS EXTRA', bx + 25, innerY);
 
-            // Card 4: Ritmo Diário
-            drawCard(895, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
-            ctx.fillStyle = '#94A3B8';
-            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('RITMO DIARIO', 915, startY + 35);
-            ctx.fillStyle = '#60A5FA';
-            ctx.font = '800 22px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(formatMoney(mediaDiaria) + '/dia', 915, startY + 75);
-            ctx.fillStyle = '#F59E0B';
-            ctx.font = '600 12px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('Necessario: ' + formatMoney(metaDiariaNecessaria) + '/dia', 915, startY + 115);
+                if (chkComposicao) {
+                    innerY += 25;
+                    const barW = bw - 50;
+                    const wDireto = (pctDireto / 100) * barW;
+                    drawCard(bx + 25, innerY, Math.max(wDireto, 6), 22, 6, '#1E6DC3', null);
+                    drawCard(bx + 25 + wDireto, innerY, Math.max(barW - wDireto, 6), 22, 6, '#F59E0B', null);
 
-            // 4. Seção Inferior: Raio-X de Composição e Destaques
-            const botY = 310;
-            const botH = 310;
+                    innerY += 45;
+                    ctx.fillStyle = '#60A5FA';
+                    ctx.font = '700 14px "Segoe UI", Roboto, sans-serif';
+                    ctx.fillText('Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)', bx + 25, innerY);
 
-            // Bloco Esquerdo: Raio-X de Composição Direto vs Extra
-            drawCard(40, botY, 550, botH, 'rgba(255, 255, 255, 0.04)');
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '700 16px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('RAIO-X DE COMPOSICAO: DIRETO VS EXTRA', 65, botY + 40);
+                    ctx.fillStyle = '#FBBF24';
+                    ctx.font = '700 14px "Segoe UI", Roboto, sans-serif';
+                    ctx.fillText('Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)', bx + 260, innerY);
+                    innerY += 25;
+                }
 
-            // Barra segmentada
-            const barX = 65;
-            const barY = botY + 70;
-            const barW = 500;
-            const barH = 26;
-            const wDireto = (pctDireto / 100) * barW;
+                if (isGestor && chkClasses && classesResumo.length > 0) {
+                    innerY += 15;
+                    const clsBoxH = chkRitmo ? 160 : (bh - (innerY - by) - 20);
+                    drawCard(bx + 25, innerY, bw - 50, Math.max(clsBoxH, 100), 10, 'rgba(255, 255, 255, 0.05)', null);
+                    ctx.fillStyle = '#E2E8F0';
+                    ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
+                    ctx.fillText('DESEMPENHO POR CLASSE DE OPERADORES (CANAIS)', bx + 45, innerY + 28);
 
-            ctx.fillStyle = '#1E6DC3';
-            ctx.beginPath();
-            ctx.roundRect(barX, barY, Math.max(wDireto, 6), barH, [8, 0, 0, 8]);
-            ctx.fill();
+                    let clsItemY = innerY + 58;
+                    classesResumo.slice(0, 3).forEach((cls) => {
+                        ctx.fillStyle = '#93C5FD';
+                        ctx.font = '700 12px "Segoe UI", Roboto, sans-serif';
+                        ctx.fillText('• ' + cls.nome.toUpperCase() + ' (' + cls.count + ' operadores):', bx + 45, clsItemY);
 
-            ctx.fillStyle = '#F59E0B';
-            ctx.beginPath();
-            ctx.roundRect(barX + wDireto, barY, Math.max(barW - wDireto, 6), barH, [0, 8, 8, 0]);
-            ctx.fill();
+                        ctx.fillStyle = '#34D399';
+                        ctx.font = '800 13px "Segoe UI", Roboto, sans-serif';
+                        ctx.fillText(formatMoney(cls.total), bx + 250, clsItemY);
 
-            // Detalhes Direto
-            ctx.fillStyle = '#60A5FA';
-            ctx.font = '700 15px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)', 65, botY + 140);
+                        ctx.fillStyle = '#94A3B8';
+                        ctx.font = '500 11px "Segoe UI", Roboto, sans-serif';
+                        ctx.fillText('Dir: ' + formatMoney(cls.direto) + ' | Ext: ' + formatMoney(cls.extra), bx + 360, clsItemY);
 
-            // Detalhes Extra
-            ctx.fillStyle = '#FBBF24';
-            ctx.font = '700 15px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)', 65, botY + 175);
+                        clsItemY += 30;
+                    });
+                    innerY += clsBoxH;
+                }
 
-            // Informação de Dias Úteis
-            ctx.fillStyle = '#94A3B8';
-            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('Total de Dias Uteis: ' + totalDias + ' | Passados: ' + diasPass + ' | Restantes: ' + diasRest, 65, botY + 230);
-            ctx.fillText('Calculo de projecao estritamente baseado no ritmo de dias uteis.', 65, botY + 260);
+                if (chkRitmo) {
+                    innerY += 15;
+                    const ritmoBoxH = bh - (innerY - by) - 20;
+                    if (ritmoBoxH > 60) {
+                        drawCard(bx + 25, innerY, bw - 50, ritmoBoxH, 10, 'rgba(255, 255, 255, 0.05)', null);
+                        ctx.fillStyle = '#E2E8F0';
+                        ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
+                        ctx.fillText(isGestor ? 'INDICADORES TEMPORAIS DO SETOR' : 'INDICADORES DE EXECUÇÃO TEMPORAL DA EQUIPE', bx + 45, innerY + 28);
 
-            // Bloco Direito: Top Destaques / Ranking
-            drawCard(610, botY, 550, botH, 'rgba(255, 255, 255, 0.04)');
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '700 16px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('PRINCIPAIS DESTAQUES DO RANKING', 635, botY + 40);
+                        ctx.fillStyle = '#94A3B8';
+                        ctx.font = '600 12px "Segoe UI", Roboto, sans-serif';
+                        ctx.fillText('• Dias Úteis Decorridos: ' + diasPass + ' de ' + totalDias + ' dias (' + ((diasPass/Math.max(totalDias,1))*100).toFixed(1) + '%)', bx + 45, innerY + 58);
+                        ctx.fillText('• Meta Linear Esperada Hoje: ' + formatMoney((metaValor / Math.max(totalDias, 1)) * diasPass), bx + 45, innerY + 84);
+                        ctx.fillText('• Saldo vs Meta Linear: ' + (totalRecebido >= (metaValor / Math.max(totalDias, 1) * diasPass) ? '+' : '') + formatMoney(totalRecebido - (metaValor / Math.max(totalDias, 1) * diasPass)), bx + 45, innerY + 110);
+                    }
+                }
+            }
 
-            let rankPosY = botY + 80;
-            ranking.forEach((item, idx) => {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-                ctx.beginPath();
-                ctx.roundRect(635, rankPosY - 18, 500, 42, 8);
-                ctx.fill();
+            function renderRightBlock(bx, by, bw, bh) {
+                drawCard(bx, by, bw, bh, 14, 'rgba(255, 255, 255, 0.04)', 'rgba(255, 255, 255, 0.12)');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '700 16px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(isGestor ? (chkEquipes ? 'RANKING DAS EQUIPES DO SETOR' : 'TOP OPERADORES DO SETOR') : 'RANKING DOS OPERADORES DA EQUIPE', bx + 25, by + 35);
 
-                ctx.fillStyle = idx === 0 ? '#FBBF24' : '#E2E8F0';
-                ctx.font = '700 14px "Segoe UI", Roboto, sans-serif';
-                ctx.fillText((idx + 1) + '. ' + item.label, 650, rankPosY + 8);
+                const countItems = ranking.length;
+                if (countItems === 0) {
+                    ctx.fillStyle = '#94A3B8';
+                    ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+                    ctx.fillText('Nenhum dado selecionado para o ranking.', bx + 25, by + 80);
+                    return;
+                }
 
-                ctx.fillStyle = '#34D399';
-                ctx.font = '800 15px "Segoe UI", Roboto, sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillText(formatMoney(item.valor), 1120, rankPosY + 8);
-                ctx.textAlign = 'left';
+                const itemH = Math.min(46, Math.floor((bh - 70) / countItems) - 6);
+                const itemGap = 6;
+                let startRankY = by + 52;
+                const posColors = ['#FEF3C7', '#E2E8F0', '#FED7AA', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)'];
+                const posTextColors = ['#B45309', '#475569', '#C2410C', '#CBD5E1', '#CBD5E1', '#CBD5E1', '#CBD5E1', '#CBD5E1', '#CBD5E1', '#CBD5E1'];
 
-                rankPosY += 52;
-            });
+                ranking.forEach((item, idx) => {
+                    const curY = startRankY + idx * (itemH + itemGap);
+                    drawCard(bx + 25, curY, bw - 50, itemH, 10, idx === 0 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(255, 255, 255, 0.05)', idx === 0 ? 'rgba(251, 191, 36, 0.25)' : 'rgba(255, 255, 255, 0.08)');
+                    drawCard(bx + 37, curY + Math.floor((itemH - 28)/2), 38, 28, 8, posColors[idx] || 'rgba(255,255,255,0.08)', null);
 
-            // 5. Rodapé
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.fillStyle = posTextColors[idx] || '#CBD5E1';
+                    ctx.font = '800 13px "Segoe UI", Roboto, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((idx + 1) + 'º', bx + 56, curY + Math.floor((itemH - 28)/2) + 19);
+                    ctx.textAlign = 'left';
+
+                    let nomeFormatado = String(item.label || 'N/A').toUpperCase();
+                    ctx.fillStyle = idx === 0 ? '#FBBF24' : '#FFFFFF';
+                    ctx.font = '700 14px "Segoe UI", Roboto, sans-serif';
+
+                    const maxNameWidth = bw - 260;
+                    if (ctx.measureText(nomeFormatado).width > maxNameWidth) {
+                        while (ctx.measureText(nomeFormatado + '...').width > maxNameWidth && nomeFormatado.length > 0) {
+                            nomeFormatado = nomeFormatado.slice(0, -1);
+                        }
+                        nomeFormatado += '...';
+                    }
+                    ctx.fillText(nomeFormatado, bx + 85, curY + Math.floor((itemH - 28)/2) + 19);
+
+                    ctx.fillStyle = '#34D399';
+                    ctx.font = '800 15px "Segoe UI", Roboto, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(formatMoney(item.valor), bx + bw - 40, curY + Math.floor((itemH - 28)/2) + 20);
+                    ctx.textAlign = 'left';
+                });
+            }
+
+            // Rodapé
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
             ctx.font = '500 11px "Segoe UI", Roboto, sans-serif';
-            ctx.fillText('Gerado automaticamente pelo Sistema de Gestao de Metas | Controle Receptivo', 40, 650);
+            ctx.fillText('Gerado automaticamente pelo Sistema de Gestão de Metas | Controle Receptivo', 45, 695);
 
-            // 6. Download Automático da Imagem PNG
-            const link = document.createElement('a');
-            const nomeArquivo = 'fechamento_executivo_' + (tipo === 'gestor' ? 'setor' : 'equipe') + '_' + hojeStr.replace(/\//g, '_') + '.png';
-            link.download = nomeArquivo;
-            link.href = canvas.toDataURL('image/png');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            try {
+                const link = document.createElement('a');
+                const nomeArquivo = 'informativo_' + (isGestor ? 'setor' : 'equipe') + '_' + hojeStr.replace(/\//g, '_') + '.png';
+                link.download = nomeArquivo;
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (errDownload) {
+                console.warn('Erro no download:', errDownload);
+            }
 
-            showToast('Card de apresentacao baixado com sucesso!');
+            showToast('Informativo baixado com sucesso!');
         };
