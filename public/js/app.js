@@ -5140,6 +5140,55 @@
 
             // Card de posição no ranking (sem emojis)
 
+            
+            // Calcular operador acima e abaixo para disputa de ranking
+            const rankingGeralOperadores = todosOperadores.map(op => {
+                const mo = metas.find(m => m?.usuario_id === op.id && m?.mes === mes && m?.ano === ano);
+                return { id: op.id, nome: op.nome, recebido: mo?.recebido || 0 };
+            }).sort((a, b) => b.recebido - a.recebido);
+
+            const userIndexGeral = rankingGeralOperadores.findIndex(x => x.id === currentUser.id);
+            const opAcima = userIndexGeral > 0 ? rankingGeralOperadores[userIndexGeral - 1] : null;
+            const opAbaixo = userIndexGeral >= 0 && userIndexGeral < rankingGeralOperadores.length - 1 ? rankingGeralOperadores[userIndexGeral + 1] : null;
+
+            const cardDisputaHtml = `
+        <div class="metric-card" style="background: white; border: 1px solid #E2E8F0;">
+            <div class="metric-title" style="color: #0F3B6F; font-weight: 800;">DISPUTA DE POSICAO NO RANKING</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                ${opAcima ? `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #FEF2F2; padding: 10px 14px; border-radius: 10px; border-left: 4px solid #DC2626;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: #991B1B; font-weight: 700;">ACIMA DE VOCE (${userIndexGeral}º)</div>
+                            <div style="font-size: 0.9rem; font-weight: 700; color: #0F2E52;">${opAcima.nome}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #DC2626;">▼ Falta ${formatMoney(opAcima.recebido - recebido)}</div>
+                            <div style="font-size: 0.7rem; color: #991B1B;">para alcancar</div>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="background: #ECFDF5; padding: 10px 14px; border-radius: 10px; border-left: 4px solid #10B981; color: #065F46; font-size: 0.85rem; font-weight: 700;">
+                        Lider do Ranking Geral! Parabens pela 1ª posicao!
+                    </div>
+                `}
+
+                ${opAbaixo ? `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #F0FDF4; padding: 10px 14px; border-radius: 10px; border-left: 4px solid #16A34A;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: #166534; font-weight: 700;">ABAIXO DE VOCE (${userIndexGeral + 2}º)</div>
+                            <div style="font-size: 0.9rem; font-weight: 700; color: #0F2E52;">${opAbaixo.nome}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #16A34A;">▲ Vantagem de ${formatMoney(recebido - opAbaixo.recebido)}</div>
+                            <div style="font-size: 0.7rem; color: #166534;">a frente dele</div>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+
             const rankingCard = `
 
         <div class="metric-card" style="background: linear-gradient(135deg, #6C757D, #495057); color: white;">
@@ -5200,7 +5249,7 @@
 
 </div>
 
-<!-- TERCEIRA LINHA: META DIARIA + POSICAO RANKING -->
+<!-- TERCEIRA LINHA: META DIARIA + POSICAO RANKING + DISPUTA -->
 
 <div class="operador-metrics-grid" style="grid-template-columns: repeat(2, 1fr);">
 
@@ -5274,13 +5323,37 @@
 
     <h4>Ranking Geral - Top 10 Operadores</h4>
 
-    ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => `<li style="${m.isCurrentUser ? 'background: #EFF6FF; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
+    ${rankingMembros.length > 0 ? `<ul class="ranking-list">${rankingMembros.map((m, idx) => {
+                const userIndex = rankingMembros.findIndex(x => x.id === currentUser.id);
+                const isCurrentUser = m.id === currentUser.id;
+                const isImmediatelyAbove = userIndex !== -1 && idx === userIndex - 1;
+                const isImmediatelyBelow = userIndex !== -1 && idx === userIndex + 1;
 
-        <div class="ranking-position" style="${m.isCurrentUser ? 'background: #28A745; border: none; padding: 0; overflow: hidden;' : 'border: none; padding: 0; overflow: hidden;'}">${getFotoRanking(m.id, m.nome)}</div>
+                let badgeDisputa = '';
+                if (isImmediatelyAbove && userIndex !== -1) {
+                    const currentUserObj = rankingMembros[userIndex];
+                    const gap = m.recebido - (currentUserObj ? currentUserObj.recebido : 0);
+                    badgeDisputa = `<span style="color: #DC2626; background: #FEE2E2; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="font-size: 10px;">▼</span> Falta ${formatMoney(gap)}</span>`;
+                } else if (isImmediatelyBelow && userIndex !== -1) {
+                    const currentUserObj = rankingMembros[userIndex];
+                    const lead = (currentUserObj ? currentUserObj.recebido : 0) - m.recebido;
+                    badgeDisputa = `<span style="color: #16A34A; background: #DCFCE7; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="font-size: 10px;">▲</span> Vantagem de ${formatMoney(lead)}</span>`;
+                } else if (isCurrentUser) {
+                    badgeDisputa = `<span style="color: #1E6DC3; background: #DBEAFE; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 0.75rem; margin-left: 8px;">Voce (${formatMoney(m.recebido)})</span>`;
+                }
 
-        <div class="ranking-name" style="${m.isCurrentUser ? 'font-weight: 800; color: #1E6DC3;' : ''}">${m.nome} ${m.isCurrentUser ? '(Voce)' : ''}</div>
-
-    </li>`).join('')}</ul>` : '<p class="no-data-message">Nenhum operador cadastrado.</p>'}
+                return `
+                <li style="${isCurrentUser ? 'background: #EFF6FF; border: 2px solid #1E6DC3; border-radius: 12px; padding: 12px; margin: 6px 0;' : m.cargo === 'supervisor' ? 'background: #FFF3CD; border-radius: 12px; padding: 12px; margin: 4px 0;' : ''}">
+                    <div class="ranking-position" style="border: none; padding: 0; overflow: hidden;">${getFotoRanking(m.id, m.nome)}</div>
+                    <div class="ranking-name" style="${isCurrentUser ? 'font-weight: 800; color: #1E6DC3;' : m.cargo === 'supervisor' ? 'font-weight: 800; color: #856404;' : ''}; display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span>${idx + 1}º ${m.nome} ${m.cargo === 'supervisor' ? '(Supervisor)' : ''}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-weight: 700; color: #0F3B6F;">${formatMoney(m.recebido)}</span>
+                            ${badgeDisputa}
+                        </div>
+                    </div>
+                </li>
+            `}).join('')}</ul>` : '<p class="no-data-message">Nenhum operador cadastrado.</p>'}
 
 </div>
 
@@ -5778,6 +5851,17 @@
 
             const html = `
 
+        
+            <!-- BARRA DE ACOES EXECUTIVAS SUPERVISOR -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button onclick="window.copiarResumoTexto('supervisor')" class="btn" style="background: #0F3B6F; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15, 59, 111, 0.2);">
+                    Copiar Resumo da Equipe (Texto)
+                </button>
+                <button onclick="window.exportarCardImagem('supervisor')" class="btn" style="background: #1E6DC3; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(30, 109, 195, 0.25);">
+                    Exportar Card da Equipe (Imagem PNG)
+                </button>
+            </div>
+    
         <div class="supervisor-metrics-grid" style="grid-template-columns: repeat(5, 1fr);">
 
             <!-- Card 1: Total Recebido -->
@@ -6869,6 +6953,17 @@
 
             const cardsHtml = `
 
+        
+            <!-- BARRA DE ACOES EXECUTIVAS -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button onclick="window.copiarResumoTexto('gestor')" class="btn" style="background: #0F3B6F; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15, 59, 111, 0.2);">
+                    Copiar Resumo (Texto)
+                </button>
+                <button onclick="window.exportarCardImagem('gestor')" class="btn" style="background: #1E6DC3; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(30, 109, 195, 0.25);">
+                    Exportar Card (Imagem PNG)
+                </button>
+            </div>
+    
         <div class="supervisor-metrics-grid" style="grid-template-columns: repeat(4, 1fr);">
 
             <div class="metric-card">
@@ -16700,3 +16795,402 @@
         } catch (errRealtime) {
             console.warn('Realtime sync fallback:', errRealtime);
         }
+
+        // =========================================================================
+        // RECURSOS EXECUTIVOS: EXPORTAR CARD, COPIAR RESUMO, TENDENCIA E RAIO-X
+        // (Sem emojis, foco em tomada de decisão e apresentação de resultados)
+        // =========================================================================
+
+        window.copiarResumoTexto = async function (tipo) {
+            const mes = new Date().getMonth() + 1;
+            const ano = new Date().getFullYear();
+            const hojeStr = new Date().toLocaleDateString('pt-BR');
+            const totalDias = getDiasUteis();
+            const diasPass = getDiasPassados();
+            const diasRest = getDiasRestantes();
+
+            let texto = '';
+
+            if (tipo === 'gestor') {
+                const metaSetor = getMetaSetor();
+                const usuariosAtivos = usuarios.filter(u => u.status === 'ativo');
+                let totalRecebido = 0, totalDireto = 0, totalExtra = 0;
+
+                for (const u of usuariosAtivos) {
+                    const m = metas.find(meta => meta?.usuario_id === u.id && meta?.mes === mes && meta?.ano === ano);
+                    if (m) {
+                        totalRecebido += m.recebido || 0;
+                        totalDireto += m.direto || 0;
+                        totalExtra += m.extra || 0;
+                    }
+                }
+
+                const alcance = metaSetor > 0 ? (totalRecebido / metaSetor) * 100 : 0;
+                const projecao = calcularProjecao(metaSetor, totalRecebido);
+                const falta = Math.max(0, metaSetor - totalRecebido);
+                const mediaDiaria = diasPass > 0 ? totalRecebido / diasPass : 0;
+                const metaDiariaNecessaria = diasRest > 0 ? falta / diasRest : 0;
+                const pctDireto = totalRecebido > 0 ? (totalDireto / totalRecebido) * 100 : 0;
+                const pctExtra = totalRecebido > 0 ? (totalExtra / totalRecebido) * 100 : 0;
+
+                // Ranking de Equipes
+                const equipesRanking = equipes.map(eq => {
+                    const membrosEq = usuarios.filter(u => u.equipe_id === eq.id && u.status === 'ativo');
+                    let totEq = 0;
+                    membrosEq.forEach(m => {
+                        const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
+                        if (mo) totEq += mo.recebido || 0;
+                    });
+                    return { nome: eq.nome, total: totEq };
+                }).sort((a, b) => b.total - a.total);
+
+                texto = [
+                    'RELATORIO EXECUTIVO - CONTROLE RECEPTIVO (SETOR GERAL)',
+                    'Data de Emissao: ' + hojeStr,
+                    'Dias Uteis: ' + diasPass + ' de ' + totalDias + ' passados (' + diasRest + ' restantes)',
+                    '',
+                    '--- INDICADORES PRINCIPAIS ---',
+                    'Total Recebido: ' + formatMoney(totalRecebido),
+                    'Meta do Setor: ' + formatMoney(metaSetor),
+                    'Alcance da Meta: ' + alcance.toFixed(2) + '%',
+                    'Projecao de Fechamento: ' + projecao.toFixed(2) + '%',
+                    'Falta para Meta: ' + (falta === 0 ? 'META ATINGIDA' : formatMoney(falta)),
+                    '',
+                    '--- COMPOSICAO DE RECEBIMENTO ---',
+                    'Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)',
+                    'Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)',
+                    '',
+                    '--- RITMO DA OPERACAO ---',
+                    'Media Diaria Atual: ' + formatMoney(mediaDiaria) + '/dia',
+                    'Meta Diaria Necessaria: ' + formatMoney(metaDiariaNecessaria) + '/dia',
+                    'Status: ' + (totalRecebido >= (metaSetor / Math.max(totalDias, 1) * diasPass) ? 'Acima do ritmo linear' : 'Abaixo do ritmo linear'),
+                    '',
+                    '--- RANKING DAS EQUIPES ---',
+                    equipesRanking.map((eq, i) => (i + 1) + '. ' + eq.nome + ': ' + formatMoney(eq.total)).join('\n')
+                ].join('\n');
+
+            } else {
+                // Tipo Supervisor / Equipe
+                const supervisorEquipe = equipes.find(e => e.id === currentUser?.equipe_id);
+                const nomeEquipe = supervisorEquipe ? supervisorEquipe.nome : 'Sua Equipe';
+                const metaEqObj = metasEquipe.find(me => me?.equipe_id === supervisorEquipe?.id && me?.mes === mes && me?.ano === ano);
+                const metaEquipe = metaEqObj?.meta || 100000;
+
+                const membros = usuarios.filter(u => u.equipe_id === supervisorEquipe?.id && u.status === 'ativo');
+                let totalRecebido = 0, totalDireto = 0, totalExtra = 0;
+                const rankingMembros = [];
+
+                for (const m of membros) {
+                    const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
+                    const rec = mo?.recebido || 0;
+                    totalRecebido += rec;
+                    totalDireto += mo?.direto || 0;
+                    totalExtra += mo?.extra || 0;
+                    rankingMembros.push({ nome: m.nome, recebido: rec });
+                }
+
+                rankingMembros.sort((a, b) => b.recebido - a.recebido);
+                const alcance = metaEquipe > 0 ? (totalRecebido / metaEquipe) * 100 : 0;
+                const projecao = calcularProjecao(metaEquipe, totalRecebido);
+                const falta = Math.max(0, metaEquipe - totalRecebido);
+                const mediaDiaria = diasPass > 0 ? totalRecebido / diasPass : 0;
+                const metaDiariaNecessaria = diasRest > 0 ? falta / diasRest : 0;
+
+                texto = [
+                    'RELATORIO EXECUTIVO - ' + nomeEquipe.toUpperCase(),
+                    'Data de Emissao: ' + hojeStr,
+                    'Dias Uteis: ' + diasPass + ' de ' + totalDias + ' passados (' + diasRest + ' restantes)',
+                    '',
+                    '--- INDICADORES DA EQUIPE ---',
+                    'Total Recebido: ' + formatMoney(totalRecebido),
+                    'Meta da Equipe: ' + formatMoney(metaEquipe),
+                    'Alcance da Meta: ' + alcance.toFixed(2) + '%',
+                    'Projecao de Fechamento: ' + projecao.toFixed(2) + '%',
+                    'Falta para Meta: ' + (falta === 0 ? 'META ATINGIDA' : formatMoney(falta)),
+                    '',
+                    '--- COMPOSICAO DA EQUIPE ---',
+                    'Direto: ' + formatMoney(totalDireto),
+                    'Extra: ' + formatMoney(totalExtra),
+                    'Media Diaria Atual: ' + formatMoney(mediaDiaria) + '/dia',
+                    'Meta Diaria Necessaria: ' + formatMoney(metaDiariaNecessaria) + '/dia',
+                    '',
+                    '--- RANKING DOS OPERADORES ---',
+                    rankingMembros.map((m, i) => (i + 1) + '. ' + m.nome + ': ' + formatMoney(m.recebido)).join('\n')
+                ].join('\n');
+            }
+
+            try {
+                await navigator.clipboard.writeText(texto);
+                showToast('Resumo executivo copiado com sucesso!');
+            } catch (err) {
+                console.error('Erro ao copiar:', err);
+                // Fallback via textarea
+                const ta = document.createElement('textarea');
+                ta.value = texto;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('Resumo executivo copiado para a area de transferencia!');
+            }
+        };
+
+        window.exportarCardImagem = function (tipo) {
+            const mes = new Date().getMonth() + 1;
+            const ano = new Date().getFullYear();
+            const hojeStr = new Date().toLocaleDateString('pt-BR');
+            const totalDias = getDiasUteis();
+            const diasPass = getDiasPassados();
+            const diasRest = getDiasRestantes();
+
+            let titulo = '';
+            let subtitulo = '';
+            let totalRecebido = 0;
+            let metaValor = 0;
+            let totalDireto = 0;
+            let totalExtra = 0;
+            let ranking = [];
+
+            if (tipo === 'gestor') {
+                titulo = 'RELATORIO EXECUTIVO - CONTROLE RECEPTIVO';
+                subtitulo = 'Desempenho Geral do Setor';
+                metaValor = getMetaSetor();
+                const usuariosAtivos = usuarios.filter(u => u.status === 'ativo');
+
+                for (const u of usuariosAtivos) {
+                    const m = metas.find(meta => meta?.usuario_id === u.id && meta?.mes === mes && meta?.ano === ano);
+                    if (m) {
+                        totalRecebido += m.recebido || 0;
+                        totalDireto += m.direto || 0;
+                        totalExtra += m.extra || 0;
+                    }
+                }
+
+                ranking = equipes.map(eq => {
+                    let tot = 0;
+                    usuarios.filter(u => u.equipe_id === eq.id && u.status === 'ativo').forEach(m => {
+                        const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
+                        if (mo) tot += mo.recebido || 0;
+                    });
+                    return { label: eq.nome, valor: tot };
+                }).sort((a, b) => b.valor - a.valor).slice(0, 4);
+
+            } else {
+                const supervisorEquipe = equipes.find(e => e.id === currentUser?.equipe_id);
+                titulo = 'RELATORIO EXECUTIVO - ' + (supervisorEquipe ? supervisorEquipe.nome.toUpperCase() : 'EQUIPE');
+                subtitulo = 'Acompanhamento de Resultados da Equipe';
+                const metaEqObj = metasEquipe.find(me => me?.equipe_id === supervisorEquipe?.id && me?.mes === mes && me?.ano === ano);
+                metaValor = metaEqObj?.meta || 100000;
+
+                const membros = usuarios.filter(u => u.equipe_id === supervisorEquipe?.id && u.status === 'ativo');
+                for (const m of membros) {
+                    const mo = metas.find(x => x?.usuario_id === m.id && x?.mes === mes && x?.ano === ano);
+                    const rec = mo?.recebido || 0;
+                    totalRecebido += rec;
+                    totalDireto += mo?.direto || 0;
+                    totalExtra += mo?.extra || 0;
+                    ranking.push({ label: m.nome, valor: rec });
+                }
+                ranking.sort((a, b) => b.valor - a.valor).slice(0, 4);
+            }
+
+            const alcance = metaValor > 0 ? (totalRecebido / metaValor) * 100 : 0;
+            const projecao = calcularProjecao(metaValor, totalRecebido);
+            const falta = Math.max(0, metaValor - totalRecebido);
+            const mediaDiaria = diasPass > 0 ? totalRecebido / diasPass : 0;
+            const metaDiariaNecessaria = diasRest > 0 ? falta / diasRest : 0;
+            const pctDireto = totalRecebido > 0 ? (totalDireto / totalRecebido) * 100 : 0;
+            const pctExtra = totalRecebido > 0 ? (totalExtra / totalRecebido) * 100 : 0;
+
+            // Criar canvas 1200x675 (proporção 16:9 HD de apresentação)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 675;
+            const ctx = canvas.getContext('2d');
+
+            // 1. Fundo Gradiente Elegante Escuro
+            const gradBg = ctx.createLinearGradient(0, 0, 1200, 675);
+            gradBg.addColorStop(0, '#07162C');
+            gradBg.addColorStop(0.5, '#0B2347');
+            gradBg.addColorStop(1, '#0F3B6F');
+            ctx.fillStyle = gradBg;
+            ctx.fillRect(0, 0, 1200, 675);
+
+            // Detalhes decorativos sutis
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(40, 110);
+            ctx.lineTo(1160, 110);
+            ctx.stroke();
+
+            // 2. Cabeçalho
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 28px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(titulo, 40, 58);
+
+            ctx.fillStyle = '#93C5FD';
+            ctx.font = '600 15px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(subtitulo + ' | Data: ' + hojeStr + ' | Dia Util: ' + diasPass + ' de ' + totalDias, 40, 88);
+
+            // Badge de status no topo direito
+            const badgeText = projecao >= 100 ? 'PROJECAO POSITIVA' : 'RITMO DE ATENCAO';
+            const badgeBg = projecao >= 100 ? '#10B981' : '#F59E0B';
+            ctx.fillStyle = badgeBg;
+            ctx.beginPath();
+            ctx.roundRect(980, 42, 180, 36, 18);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(badgeText, 1070, 65);
+            ctx.textAlign = 'left';
+
+            // Função auxiliar para desenhar cards arredondados
+            function drawCard(x, y, w, h, bg) {
+                ctx.fillStyle = bg;
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, 14);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+                ctx.stroke();
+            }
+
+            // 3. Grid de 4 Cards Principais de Métricas
+            const cardW = 265;
+            const cardH = 150;
+            const startY = 135;
+
+            // Card 1: Total Recebido
+            drawCard(40, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('TOTAL RECEBIDO', 60, startY + 35);
+            ctx.fillStyle = '#34D399';
+            ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(formatMoney(totalRecebido), 60, startY + 75);
+            ctx.fillStyle = '#E2E8F0';
+            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(alcance.toFixed(1) + '% da meta atingida', 60, startY + 115);
+
+            // Card 2: Meta Planejada
+            drawCard(325, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('META PLANEJADA', 345, startY + 35);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(formatMoney(metaValor), 345, startY + 75);
+            ctx.fillStyle = '#F87171';
+            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(falta === 0 ? 'Meta atingida' : 'Falta: ' + formatMoney(falta), 345, startY + 115);
+
+            // Card 3: Projeção de Fechamento
+            drawCard(610, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('PROJECAO FECHAMENTO', 630, startY + 35);
+            ctx.fillStyle = projecao >= 100 ? '#38BDF8' : '#FBBF24';
+            ctx.font = '800 24px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(projecao.toFixed(1) + '%', 630, startY + 75);
+            ctx.fillStyle = '#E2E8F0';
+            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(projecao >= 100 ? 'No ritmo projetado' : 'Abaixo da meta', 630, startY + 115);
+
+            // Card 4: Ritmo Diário
+            drawCard(895, startY, cardW, cardH, 'rgba(255, 255, 255, 0.06)');
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = '700 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('RITMO DIARIO', 915, startY + 35);
+            ctx.fillStyle = '#60A5FA';
+            ctx.font = '800 22px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(formatMoney(mediaDiaria) + '/dia', 915, startY + 75);
+            ctx.fillStyle = '#F59E0B';
+            ctx.font = '600 12px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('Necessario: ' + formatMoney(metaDiariaNecessaria) + '/dia', 915, startY + 115);
+
+            // 4. Seção Inferior: Raio-X de Composição e Destaques
+            const botY = 310;
+            const botH = 310;
+
+            // Bloco Esquerdo: Raio-X de Composição Direto vs Extra
+            drawCard(40, botY, 550, botH, 'rgba(255, 255, 255, 0.04)');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '700 16px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('RAIO-X DE COMPOSICAO: DIRETO VS EXTRA', 65, botY + 40);
+
+            // Barra segmentada
+            const barX = 65;
+            const barY = botY + 70;
+            const barW = 500;
+            const barH = 26;
+            const wDireto = (pctDireto / 100) * barW;
+
+            ctx.fillStyle = '#1E6DC3';
+            ctx.beginPath();
+            ctx.roundRect(barX, barY, Math.max(wDireto, 6), barH, [8, 0, 0, 8]);
+            ctx.fill();
+
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.roundRect(barX + wDireto, barY, Math.max(barW - wDireto, 6), barH, [0, 8, 8, 0]);
+            ctx.fill();
+
+            // Detalhes Direto
+            ctx.fillStyle = '#60A5FA';
+            ctx.font = '700 15px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('Direto: ' + formatMoney(totalDireto) + ' (' + pctDireto.toFixed(1) + '%)', 65, botY + 140);
+
+            // Detalhes Extra
+            ctx.fillStyle = '#FBBF24';
+            ctx.font = '700 15px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('Extra: ' + formatMoney(totalExtra) + ' (' + pctExtra.toFixed(1) + '%)', 65, botY + 175);
+
+            // Informação de Dias Úteis
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = '600 13px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('Total de Dias Uteis: ' + totalDias + ' | Passados: ' + diasPass + ' | Restantes: ' + diasRest, 65, botY + 230);
+            ctx.fillText('Calculo de projecao estritamente baseado no ritmo de dias uteis.', 65, botY + 260);
+
+            // Bloco Direito: Top Destaques / Ranking
+            drawCard(610, botY, 550, botH, 'rgba(255, 255, 255, 0.04)');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '700 16px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('PRINCIPAIS DESTAQUES DO RANKING', 635, botY + 40);
+
+            let rankPosY = botY + 80;
+            ranking.forEach((item, idx) => {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+                ctx.beginPath();
+                ctx.roundRect(635, rankPosY - 18, 500, 42, 8);
+                ctx.fill();
+
+                ctx.fillStyle = idx === 0 ? '#FBBF24' : '#E2E8F0';
+                ctx.font = '700 14px "Segoe UI", Roboto, sans-serif';
+                ctx.fillText((idx + 1) + '. ' + item.label, 650, rankPosY + 8);
+
+                ctx.fillStyle = '#34D399';
+                ctx.font = '800 15px "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(formatMoney(item.valor), 1120, rankPosY + 8);
+                ctx.textAlign = 'left';
+
+                rankPosY += 52;
+            });
+
+            // 5. Rodapé
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.font = '500 11px "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('Gerado automaticamente pelo Sistema de Gestao de Metas | Controle Receptivo', 40, 650);
+
+            // 6. Download Automático da Imagem PNG
+            const link = document.createElement('a');
+            const nomeArquivo = 'fechamento_executivo_' + (tipo === 'gestor' ? 'setor' : 'equipe') + '_' + hojeStr.replace(/\//g, '_') + '.png';
+            link.download = nomeArquivo;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('Card de apresentacao baixado com sucesso!');
+        };
