@@ -11083,6 +11083,8 @@
 
                 carregarSupervisorDashboard();
 
+                carregarVisaoSetor();
+
                 carregarEquipesTabGestor();
 
                 carregarAdminReformuladoGestor();
@@ -11386,6 +11388,7 @@
                     tabsHtml += `<button class="tab-btn" onclick="switchTab('admin', event)">Painel Admin</button><button class="tab-btn" onclick="switchTab('operadores', event)">Usuários</button><button class="tab-btn" onclick="switchTab('equipes', event)">Equipes</button><button class="tab-btn" onclick="switchTab('usuarios', event)">Supervisores</button><button class="tab-btn" onclick="switchTab('historico', event)">Histórico</button>`;
                 } else if (currentUser.cargo === 'supervisor') {
                     tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoEquipe', event)">Visão da Equipe</button>`;
+                    tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoSetor', event)">Visão do Setor</button>`;
                     tabsHtml += `<button class="tab-btn" onclick="switchTab('admin', event)">Painel Admin</button><button class="tab-btn" onclick="switchTab('operadores', event)">Usuários</button><button class="tab-btn" onclick="switchTab('equipes', event)">Equipes</button><button class="tab-btn" onclick="switchTab('usuarios', event)">Supervisores</button><button class="tab-btn" onclick="switchTab('historico', event)">Histórico</button>`;
                 } else if (currentUser.cargo === 'operador') {
                     tabsHtml += `<button class="tab-btn" onclick="switchTab('visaoEquipe', event)">Visão da Equipe</button>`;
