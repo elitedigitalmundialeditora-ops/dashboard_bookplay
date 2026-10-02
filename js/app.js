@@ -11496,30 +11496,7 @@
 
         // ============================================
 
-        function isAmbienteCorporativo() {
-            const host = window.location.hostname;
-            if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
-            if (/^10\./.test(host)) return true;
-            if (/^192\.168\./.test(host)) return true;
-            if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)) return true;
-            return false;
-        }
-
         async function checkAuth() {
-
-            // Validação de segurança: apenas rede interna da empresa
-            if (!isAmbienteCorporativo()) {
-                document.body.innerHTML = `
-                <div style="position:fixed;inset:0;background:#07192F;color:#E2E8F0;display:flex;align-items:center;justify-content:center;font-family:sans-serif;padding:20px;z-index:999999;">
-                    <div style="background:#0E294B;border:1px solid #DC2626;border-radius:16px;max-width:480px;width:100%;padding:40px 30px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-                        <div style="font-size:54px;margin-bottom:16px;">🔒</div>
-                        <h1 style="font-size:1.4rem;color:#EF4444;margin:0 0 12px 0;">Acesso Restrito à Empresa</h1>
-                        <p style="color:#CBD5E1;font-size:0.95rem;line-height:1.6;margin:0 0 20px 0;">O acesso a este sistema é permitido <strong>exclusivamente</strong> a partir da rede interna da empresa (intranet corporativa).</p>
-                        <div style="font-size:0.8rem;color:#94A3B8;">Host: ${escapeHtml(window.location.hostname || 'Externo')}</div>
-                    </div>
-                </div>`;
-                return;
-            }
 
             let saved = localStorage.getItem('currentUser');
 
